@@ -14,4 +14,4 @@ java -jar closure_compiler.jar --js asyncproxymaster.js --js asyncproxyslave.js 
 ```
 
 # License
-This library is ditributed under Apache license.
+This library is ditributed under Apache 2.0 license.
