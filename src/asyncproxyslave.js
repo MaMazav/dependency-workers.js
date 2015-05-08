@@ -118,11 +118,8 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
                     '= false';
             }
             
-            var argumentsAsArray = new Array(arguments.length);
-            for (var i = 0; i < arguments.length; ++i) {
-                argumentsAsArray[i] = arguments[i];
-            }
-
+            var argumentsAsArray = getArgumentsAsArray(arguments);
+            
             if (beforeOperationListener !== null) {
                 beforeOperationListener(
                     'callback', callbackHandle.callbackName, argumentsAsArray);
@@ -144,6 +141,29 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
         }
         
         return callbackWrapperFromSlaveSide;
+    };
+    
+    slaveHelperSingleton._getScriptName = function _getScriptName() {
+        var error = new Error();
+        
+        var lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/)
+        var source = lastStackFrameRegex.exec(error.stack.trim());
+        if (source && source[1] !== "") {
+            return source[1];
+        }
+        
+        var callee = arguments.callee.name;
+        var currentStackFrameRegex = new RegExp(callee + ' \\((.+?):\\d+:\\d+\\)');
+        source = currentStackFrameRegex.exec(error.stack.trim())
+        if (source && source[1] !== "") {
+            return source[1];
+        }
+
+        if (error.fileName != undefined) {
+            return error.fileName;
+        }
+        
+        throw 'AsyncProxy.js: Could not get current script URL';
     };
     
     function extractTransferables(pathsToTransferables, pathsBase) {
@@ -189,7 +209,7 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
                     importScripts(scriptsToImport[i]);
                 }
                 
-                slaveSideMainInstance = slaveSideInstanceCreator(args);
+                slaveSideMainInstance = slaveSideInstanceCreator.apply(null, args);
 
                 return;
             
@@ -215,8 +235,19 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
             args[i] = arg;
         }
         
-        var functionToCall = slaveSideMainInstance.__proto__[
-            functionNameToCall];
+        var functionContainer = slaveSideMainInstance;
+        var functionToCall;
+        while (functionContainer) {
+            functionToCall = slaveSideMainInstance[functionNameToCall];
+            if (functionToCall) {
+                break;
+            }
+            functionContainer = functionContainer.__proto__;
+        }
+        
+        if (!functionToCall) {
+            throw 'AsyncProxy error: could not find function ' + functionToCall;
+        }
         
         var promise = functionToCall.apply(slaveSideMainInstance, args);
         
@@ -232,11 +263,21 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
         });
     }
     
-    function defaultInstanceCreator(args) {
-        var TypeName = self[ctorName];
-        var instance = new (Function.prototype.bind.apply(TypeName, [null].concat(args)));
+    function defaultInstanceCreator() {
+        var TypeCtor = self[ctorName];
+        var bindArgs = [null].concat(getArgumentsAsArray(arguments));
+        var instance = new (Function.prototype.bind.apply(TypeCtor, bindArgs));
         
         return instance;
+    }
+    
+    function getArgumentsAsArray(args) {
+        var argumentsAsArray = new Array(args.length);
+        for (var i = 0; i < args.length; ++i) {
+            argumentsAsArray[i] = args[i];
+        }
+        
+        return argumentsAsArray;
     }
     
     if (self['Worker'] === undefined) {

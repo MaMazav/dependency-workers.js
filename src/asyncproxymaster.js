@@ -10,7 +10,7 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
         options = options || {};
         
         var slaveScriptContentString = mainSlaveScriptContent.toString();
-        var scriptUrl = getScriptName();
+        var scriptUrl = AsyncProxySlave._getScriptName();
         slaveScriptContentString = slaveScriptContentString.replace(
             'SCRIPT_PLACEHOLDER', scriptUrl);
         var slaveScriptContentBlob = new Blob(
@@ -144,29 +144,6 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
         AsyncProxySlave._initializeSlave();
     }
     
-    function getScriptName() {
-        var error = new Error();
-        
-        var lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/)
-        var source = lastStackFrameRegex.exec(error.stack.trim());
-        if (source && source[1] !== "") {
-            return source[1];
-        }
-        
-        var callee = arguments.callee.name;
-        var currentStackFrameRegex = new RegExp(callee + ' \\((.+?):\\d+:\\d+\\)');
-        source = currentStackFrameRegex.exec(error.stack.trim())
-        if (source && source[1] !== "") {
-            return source[1];
-        }
-
-        if (error.fileName != undefined) {
-            return error.fileName;
-        }
-        
-        throw 'AsyncProxy.js: Could not get current script URL';
-    }
-
     function onWorkerMessage(self, workerEvent) {
         var callId = workerEvent.data.callId;
         
