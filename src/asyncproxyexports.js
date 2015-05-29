@@ -3,6 +3,7 @@
 self['AsyncProxy'] = {};
 self['AsyncProxy']['AsyncProxySlave'] = AsyncProxySlave;
 self['AsyncProxy']['AsyncProxyMaster'] = AsyncProxyMaster;
+self['AsyncProxy']['ScriptsToImportPool'] = ScriptsToImportPool;
 
 SubWorkerEmulationForChrome.prototype['postMessage'] = SubWorkerEmulationForChrome.prototype.postMessage;
 SubWorkerEmulationForChrome.prototype['terminate'] = SubWorkerEmulationForChrome.prototype.terminate;
@@ -19,3 +20,6 @@ AsyncProxyMaster.prototype['callFunction'] = AsyncProxyMaster.prototype.callFunc
 AsyncProxyMaster.prototype['wrapCallback'] = AsyncProxyMaster.prototype.wrapCallback;
 AsyncProxyMaster.prototype['freeCallback'] = AsyncProxyMaster.prototype.freeCallback;
 AsyncProxyMaster['getEntryUrl'] = AsyncProxyMaster.getEntryUrl;
+
+ScriptsToImportPool.prototype['addScriptFromErrorWithStackTrace'] = ScriptsToImportPool.prototype.addScriptFromErrorWithStackTrace;
+ScriptsToImportPool.prototype['getScriptsForWorkerImport'] = ScriptsToImportPool.prototype.getScriptsForWorkerImport;

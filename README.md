@@ -10,8 +10,8 @@ The library was compiled using Google Closure Compiler:
 
 ```
 cd src
-java -jar closure_compiler.jar --js asyncproxymaster.js --js asyncproxyslave.js --js asyncproxyexports.js --js_output_file ..\asyncproxy.js --compilation_level ADVANCED_OPTIMIZATIONS
+java -jar closure_compiler.jar --js asyncproxymaster.js --js asyncproxyslave.js --js scriptstoimportpool.js --js asyncproxyexports.js --js_output_file ..\asyncproxy.js --compilation_level ADVANCED_OPTIMIZATIONS
 ```
 
 # License
-This library is ditributed under Apache 2.0 license.
+This library is distributed under Apache 2.0 license.

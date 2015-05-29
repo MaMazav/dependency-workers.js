@@ -121,8 +121,11 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
             var argumentsAsArray = getArgumentsAsArray(arguments);
             
             if (beforeOperationListener !== null) {
-                beforeOperationListener(
-                    'callback', callbackHandle.callbackName, argumentsAsArray);
+                beforeOperationListener.call(
+                    slaveSideMainInstance,
+                    'callback',
+                    callbackHandle.callbackName,
+                    argumentsAsArray);
             }
             
             var transferables = extractTransferables(
@@ -145,25 +148,9 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
     
     slaveHelperSingleton._getScriptName = function _getScriptName() {
         var error = new Error();
+        var scriptName = ScriptsToImportPool._getScriptName(error);
         
-        var lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/)
-        var source = lastStackFrameRegex.exec(error.stack.trim());
-        if (source && source[1] !== "") {
-            return source[1];
-        }
-        
-        var callee = arguments.callee.name;
-        var currentStackFrameRegex = new RegExp(callee + ' \\((.+?):\\d+:\\d+\\)');
-        source = currentStackFrameRegex.exec(error.stack.trim())
-        if (source && source[1] !== "") {
-            return source[1];
-        }
-
-        if (error.fileName != undefined) {
-            return error.fileName;
-        }
-        
-        throw 'AsyncProxy.js: Could not get current script URL';
+        return scriptName;
     };
     
     function extractTransferables(pathsToTransferables, pathsBase) {
