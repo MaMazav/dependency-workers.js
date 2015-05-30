@@ -31,15 +31,16 @@ var ScriptsToImportPool = (function ScriptsToImportPoolClosure() {
     };
     
     ScriptsToImportPool._getScriptName = function getScriptName(errorWithStackTrace) {
-        var callee = arguments.callee.name;
-        var currentStackFrameRegex = new RegExp(callee + ' \\((.+?):\\d+:\\d+\\)');
-        var source = currentStackFrameRegex.exec(errorWithStackTrace.stack.trim())
-        if (source && source[1] !== "") {
-            return source[1];
+        var stack = errorWithStackTrace.stack.trim();
+        
+        var currentStackFrameRegex = /at (|[^ ]+ \()([^ ]+):\d+:\d+/;
+        var source = currentStackFrameRegex.exec(stack);
+        if (source && source[2] !== "") {
+            return source[2];
         }
 
         var lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/)
-        source = lastStackFrameRegex.exec(errorWithStackTrace.stack.trim());
+        source = lastStackFrameRegex.exec(stack);
         if (source && source[1] !== "") {
             return source[1];
         }
