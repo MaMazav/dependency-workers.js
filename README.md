@@ -11,6 +11,7 @@ The library was compiled using Google Closure Compiler:
 ```
 cd src
 java -jar closure_compiler.jar --js asyncproxymaster.js --js asyncproxyslave.js --js scriptstoimportpool.js --js asyncproxyexports.js --js_output_file ..\asyncproxy.js --compilation_level ADVANCED_OPTIMIZATIONS
+java -jar closure_compiler.jar --js asyncproxymaster.js --js asyncproxyslave.js --js scriptstoimportpool.js --js asyncproxyexports.js --js_output_file ..\asyncproxy.debug.js --compilation_level WHITESPACE_ONLY
 ```
 
 # License
