@@ -1,35 +1,36 @@
 'use strict';
 
-var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
+function AsyncProxyMasterClosure() {
+    var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     var callId = 0;
     var isGetMasterEntryUrlCalled = false;
     var masterEntryUrl = getBaseUrlFromEntryScript();
     
     function AsyncProxyMaster(scriptsToImport, ctorName, ctorArgs, options) {
-        var self = this;
+        var that = this;
         options = options || {};
         
         var slaveScriptContentString = mainSlaveScriptContent.toString();
-        var scriptUrl = AsyncProxySlave._getScriptName();
+        //var scriptUrl = AsyncProxySlave._getScriptName();
         slaveScriptContentString = slaveScriptContentString.replace(
-            'SCRIPT_PLACEHOLDER', scriptUrl);
+            'SCRIPT_PLACEHOLDER', asyncProxyScriptBlob.getBlobUrl());
         var slaveScriptContentBlob = new Blob(
             ['(', slaveScriptContentString, ')()'],
             { type: 'application/javascript' });
         var slaveScriptUrl = URL.createObjectURL(slaveScriptContentBlob);
         
-        this._callbacks = [];
-        this._pendingPromiseCalls = [];
-        this._subWorkerById = [];
-        this._subWorkers = [];
-        this._worker = new Worker(slaveScriptUrl);
-        this._worker.onmessage = onWorkerMessageInternal;
-        this._userDataHandler = null;
-        this._notReturnedFunctions = 0;
-        this._functionsBufferSize = options['functionsBufferSize'] || 5;
-        this._pendingMessages = [];
+        that._callbacks = [];
+        that._pendingPromiseCalls = [];
+        that._subWorkerById = [];
+        that._subWorkers = [];
+        that._worker = new Worker(slaveScriptUrl);
+        that._worker.onmessage = onWorkerMessageInternal;
+        that._userDataHandler = null;
+        that._notReturnedFunctions = 0;
+        that._functionsBufferSize = options['functionsBufferSize'] || 5;
+        that._pendingMessages = [];
         
-        this._worker.postMessage({
+        that._worker.postMessage({
             functionToCall: 'ctor',
             scriptsToImport: scriptsToImport,
             ctorName: ctorName,
@@ -40,7 +41,7 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
         });
         
         function onWorkerMessageInternal(workerEvent) {
-            onWorkerMessage(self, workerEvent);
+            onWorkerMessage(that, workerEvent);
         }
     }
     
@@ -64,11 +65,11 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
         
         var localCallId = ++callId;
         var promiseOnMasterSide = null;
-        var self = this;
+        var that = this;
         
         if (isReturnPromise) {
             promiseOnMasterSide = new Promise(function promiseFunc(resolve, reject) {
-                self._pendingPromiseCalls[localCallId] = {
+                that._pendingPromiseCalls[localCallId] = {
                     resolve: resolve,
                     reject: reject
                 };
@@ -141,21 +142,21 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
     
     function mainSlaveScriptContent() {
         importScripts('SCRIPT_PLACEHOLDER');
-        AsyncProxySlave._initializeSlave();
+        AsyncProxy['AsyncProxySlave']._initializeSlave();
     }
     
-    function onWorkerMessage(self, workerEvent) {
+    function onWorkerMessage(that, workerEvent) {
         var callId = workerEvent.data.callId;
         
         switch (workerEvent.data.type) {
             case 'functionCalled':
-                --self._notReturnedFunctions;
-                trySendPendingMessages(self);
+                --that._notReturnedFunctions;
+                trySendPendingMessages(that);
                 break;
             
             case 'promiseResult':
-                var promiseData = self._pendingPromiseCalls[callId];
-                delete self._pendingPromiseCalls[callId];
+                var promiseData = that._pendingPromiseCalls[callId];
+                delete that._pendingPromiseCalls[callId];
                 
                 var result = workerEvent.data.result;
                 promiseData.resolve(result);
@@ -163,8 +164,8 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
                 break;
             
             case 'promiseFailure':
-                var promiseData = self._pendingPromiseCalls[callId];
-                delete self._pendingPromiseCalls[callId];
+                var promiseData = that._pendingPromiseCalls[callId];
+                delete that._pendingPromiseCalls[callId];
                 
                 var reason = workerEvent.data.reason;
                 promiseData.reject(reason);
@@ -172,14 +173,14 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
                 break;
             
             case 'userData':
-                if (self._userDataHandler !== null) {
-                    self._userDataHandler(workerEvent.data.userData);
+                if (that._userDataHandler !== null) {
+                    that._userDataHandler(workerEvent.data.userData);
                 }
                 
                 break;
             
             case 'callback':
-                var callbackHandle = self._callbacks[workerEvent.data.callId];
+                var callbackHandle = that._callbacks[workerEvent.data.callId];
                 if (callbackHandle === undefined) {
                     throw 'Unexpected message from SlaveWorker of callback ID: ' +
                         workerEvent.data.callId + '. Maybe should indicate ' +
@@ -187,7 +188,7 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
                 }
                 
                 if (!callbackHandle.isMultipleTimeCallback) {
-                    self.freeCallback(self._callbacks[workerEvent.data.callId]);
+                    that.freeCallback(that._callbacks[workerEvent.data.callId]);
                 }
                 
                 if (callbackHandle.callback !== null) {
@@ -200,12 +201,12 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
                 var subWorker = new Worker(workerEvent.data.scriptUrl);
                 var id = workerEvent.data.subWorkerId;
                 
-                self._subWorkerById[id] = subWorker;
-                self._subWorkers.push(subWorker);
+                that._subWorkerById[id] = subWorker;
+                that._subWorkers.push(subWorker);
                 
                 subWorker.onmessage = function onSubWorkerMessage(subWorkerEvent) {
                     enqueueMessageToSlave(
-                        self, subWorkerEvent.ports, /*isFunctionCall=*/false, {
+                        that, subWorkerEvent.ports, /*isFunctionCall=*/false, {
                             functionToCall: 'subWorkerOnMessage',
                             subWorkerId: id,
                             data: subWorkerEvent.data
@@ -215,12 +216,12 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
                 break;
             
             case 'subWorkerPostMessage':
-                var subWorker = self._subWorkerById[workerEvent.data.subWorkerId];
+                var subWorker = that._subWorkerById[workerEvent.data.subWorkerId];
                 subWorker.postMessage(workerEvent.data.data);
                 break;
             
             case 'subWorkerTerminate':
-                var subWorker = self._subWorkerById[workerEvent.data.subWorkerId];
+                var subWorker = that._subWorkerById[workerEvent.data.subWorkerId];
                 subWorker.terminate();
                 break;
             
@@ -231,10 +232,10 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
     }
     
     function enqueueMessageToSlave(
-        self, transferables, isFunctionCall, message) {
+        that, transferables, isFunctionCall, message) {
         
-        if (self._notReturnedFunctions >= self._functionsBufferSize) {
-            self._pendingMessages.push({
+        if (that._notReturnedFunctions >= that._functionsBufferSize) {
+            that._pendingMessages.push({
                 transferables: transferables,
                 isFunctionCall: isFunctionCall,
                 message: message
@@ -242,26 +243,26 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
             return;
         }
         
-        sendMessageToSlave(self, transferables, isFunctionCall, message);
+        sendMessageToSlave(that, transferables, isFunctionCall, message);
     }
         
     function sendMessageToSlave(
-        self, transferables, isFunctionCall, message) {
+        that, transferables, isFunctionCall, message) {
         
         if (isFunctionCall) {
-            ++self._notReturnedFunctions;
+            ++that._notReturnedFunctions;
         }
         
-        self._worker.postMessage(message, transferables);
+        that._worker.postMessage(message, transferables);
     }
     
-    function trySendPendingMessages(self) {
-        while (self._notReturnedFunctions < self._functionsBufferSize &&
-               self._pendingMessages.length > 0) {
+    function trySendPendingMessages(that) {
+        while (that._notReturnedFunctions < that._functionsBufferSize &&
+               that._pendingMessages.length > 0) {
             
-            var message = self._pendingMessages.shift();
+            var message = that._pendingMessages.shift();
             sendMessageToSlave(
-                self,
+                that,
                 message.transferables,
                 message.isFunctionCall,
                 message.message);
@@ -278,5 +279,9 @@ var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
         return baseUrl;
     }
     
+    asyncProxyScriptBlob.addMember(AsyncProxyMasterClosure, 'AsyncProxyMaster');
+    
     return AsyncProxyMaster;
-})();
+}
+
+var AsyncProxyMaster = AsyncProxyMasterClosure();

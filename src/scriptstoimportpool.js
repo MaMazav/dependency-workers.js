@@ -1,9 +1,10 @@
 'use strict';
 
-var ScriptsToImportPool = (function ScriptsToImportPoolClosure() {
+function ScriptsToImportPoolClosure() {
     function ScriptsToImportPool() {
-        this._scriptsByName = {};
-        this._scriptsArray = null;
+        var that = this;
+        that._scriptsByName = {};
+        that._scriptsArray = null;
     }
     
     ScriptsToImportPool.prototype.addScriptFromErrorWithStackTrace =
@@ -51,6 +52,10 @@ var ScriptsToImportPool = (function ScriptsToImportPoolClosure() {
         
         throw 'ImageDecoderFramework.js: Could not get current script URL';
     };
-        
+    
+    self['asyncProxyScriptBlob'].addMember(ScriptsToImportPoolClosure, 'ScriptsToImportPool');
+    
     return ScriptsToImportPool;
-})();
+}
+
+var ScriptsToImportPool = ScriptsToImportPoolClosure();

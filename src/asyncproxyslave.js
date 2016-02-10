@@ -1,56 +1,6 @@
 'use strict';
 
-var SubWorkerEmulationForChrome = (function SubWorkerEmulationForChromeClosure() {
-    var subWorkerId = 0;
-    var subWorkerIdToSubWorker = null;
-    
-    function SubWorkerEmulationForChrome(scriptUrl) {
-        if (subWorkerIdToSubWorker === null) {
-            throw 'AsyncProxy internal error: SubWorkerEmulationForChrome ' +
-                'not initialized';
-        }
-        
-        this._subWorkerId = ++subWorkerId;
-        subWorkerIdToSubWorker[this._subWorkerId] = this;
-        
-        self.postMessage({
-            type: 'subWorkerCtor',
-            subWorkerId: this._subWorkerId,
-            scriptUrl: scriptUrl
-        });
-    }
-    
-    SubWorkerEmulationForChrome.initialize = function initialize(
-        subWorkerIdToSubWorker_) {
-        
-        subWorkerIdToSubWorker = subWorkerIdToSubWorker_;
-    }
-    
-    SubWorkerEmulationForChrome.prototype.postMessage = function postMessage(
-        data, transferables) {
-        
-        self.postMessage({
-            type: 'subWorkerPostMessage',
-            subWorkerId: this._subWorkerId,
-            data: data
-        },
-        transferables);
-    };
-    
-    SubWorkerEmulationForChrome.prototype.terminate = function terminate(
-        data, transferables) {
-        
-        self.postMessage({
-            type: 'subWorkerTerminate',
-            subWorkerId: this._subWorkerId
-        },
-        transferables);
-    };
-    
-    return SubWorkerEmulationForChrome;
-})();
-
-var AsyncProxySlave = (function AsyncProxySlaveClosure() {
+function AsyncProxySlaveClosure() {
     var slaveHelperSingleton = {};
     
     var beforeOperationListener = null;
@@ -187,7 +137,7 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
         
         switch (functionNameToCall) {
             case 'ctor':
-                AsyncProxyMaster._setEntryUrl(event.data.masterEntryUrl);
+                self['AsyncProxy']['AsyncProxyMaster']._setEntryUrl(event.data.masterEntryUrl);
                 
                 var scriptsToImport = event.data.scriptsToImport;
                 ctorName = event.data.ctorName;
@@ -268,9 +218,14 @@ var AsyncProxySlave = (function AsyncProxySlaveClosure() {
     }
     
     if (self['Worker'] === undefined) {
+        var SubWorkerEmulationForChrome = self['SubWorkerEmulationForChrome'];
         SubWorkerEmulationForChrome.initialize(subWorkerIdToSubWorker);
         self['Worker'] = SubWorkerEmulationForChrome;
     }
     
+    self['asyncProxyScriptBlob'].addMember(AsyncProxySlaveClosure, 'AsyncProxySlave');
+    
     return slaveHelperSingleton;
-})();
+}
+
+var AsyncProxySlave = AsyncProxySlaveClosure();
