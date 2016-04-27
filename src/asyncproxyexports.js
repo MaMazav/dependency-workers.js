@@ -1,17 +1,17 @@
 'use strict';
 
 function ExportAsyncProxySymbolsClosure() {
-    function ExportAsyncProxySymbols(SubWorkerEmulationForChrome, AsyncProxySlave, AsyncProxyMaster, ScriptsToImportPool) {
-        self['AsyncProxy'] = {};
+    function ExportAsyncProxySymbols(SubWorkerEmulationForChrome, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool) {
+        self['AsyncProxy'] = self['AsyncProxy'] || {};
 
         SubWorkerEmulationForChrome.prototype['postMessage'] = SubWorkerEmulationForChrome.prototype.postMessage;
         SubWorkerEmulationForChrome.prototype['terminate'] = SubWorkerEmulationForChrome.prototype.terminate;
 
-        AsyncProxySlave['setSlaveSideCreator'] = AsyncProxySlave.setSlaveSideCreator;
-        AsyncProxySlave['setBeforeOperationListener'] = AsyncProxySlave.setBeforeOperationListener;
-        AsyncProxySlave['sendUserDataToMaster'] = AsyncProxySlave.sendUserDataToMaster;
-        AsyncProxySlave['wrapPromiseFromSlaveSide'] = AsyncProxySlave.wrapPromiseFromSlaveSide;
-        AsyncProxySlave['wrapCallbackFromSlaveSide'] = AsyncProxySlave.wrapCallbackFromSlaveSide;
+        AsyncProxySlaveSingleton['setSlaveSideCreator'] = AsyncProxySlaveSingleton.setSlaveSideCreator;
+        AsyncProxySlaveSingleton['setBeforeOperationListener'] = AsyncProxySlaveSingleton.setBeforeOperationListener;
+        AsyncProxySlaveSingleton['sendUserDataToMaster'] = AsyncProxySlaveSingleton.sendUserDataToMaster;
+        AsyncProxySlaveSingleton['wrapPromiseFromSlaveSide'] = AsyncProxySlaveSingleton.wrapPromiseFromSlaveSide;
+        AsyncProxySlaveSingleton['wrapCallbackFromSlaveSide'] = AsyncProxySlaveSingleton.wrapCallbackFromSlaveSide;
 
         AsyncProxyMaster.prototype['setUserDataHandler'] = AsyncProxyMaster.prototype.setUserDataHandler;
         AsyncProxyMaster.prototype['terminate'] = AsyncProxyMaster.prototype.terminate;
@@ -25,15 +25,15 @@ function ExportAsyncProxySymbolsClosure() {
     }
     
     asyncProxyScriptBlob.addMember(ExportAsyncProxySymbolsClosure, 'ExportAsyncProxySymbols');
-    asyncProxyScriptBlob.addStatement('ExportAsyncProxySymbols(SubWorkerEmulationForChrome, AsyncProxySlave, AsyncProxyMaster, ScriptsToImportPool);');
-    asyncProxyScriptBlob.addStatement("self['AsyncProxy']['AsyncProxySlave'] = AsyncProxySlave;");
+    asyncProxyScriptBlob.addStatement('ExportAsyncProxySymbols(SubWorkerEmulationForChrome, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool);');
+    asyncProxyScriptBlob.addStatement("self['AsyncProxy']['AsyncProxySlaveSingleton'] = AsyncProxySlaveSingleton;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['AsyncProxyMaster'] = AsyncProxyMaster;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['ScriptsToImportPool'] = ScriptsToImportPool;");
     
     return ExportAsyncProxySymbols;
 }
 
-(ExportAsyncProxySymbolsClosure())(SubWorkerEmulationForChrome, AsyncProxySlave, AsyncProxyMaster, ScriptsToImportPool);
-self['AsyncProxy']['AsyncProxySlave'] = AsyncProxySlave;
+(ExportAsyncProxySymbolsClosure())(SubWorkerEmulationForChrome, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool);
+self['AsyncProxy']['AsyncProxySlaveSingleton'] = AsyncProxySlaveSingleton;
 self['AsyncProxy']['AsyncProxyMaster'] = AsyncProxyMaster;
 self['AsyncProxy']['ScriptsToImportPool'] = ScriptsToImportPool;

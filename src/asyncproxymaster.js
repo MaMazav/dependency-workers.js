@@ -142,6 +142,7 @@ function AsyncProxyMasterClosure() {
     
     function mainSlaveScriptContent() {
         importScripts('SCRIPT_PLACEHOLDER');
+		AsyncProxy['AsyncProxySlave'] = self['AsyncProxy']['AsyncProxySlaveSingleton'];
         AsyncProxy['AsyncProxySlave']._initializeSlave();
     }
     

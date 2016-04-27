@@ -71,11 +71,15 @@ function AsyncProxySlaveClosure() {
             var argumentsAsArray = getArgumentsAsArray(arguments);
             
             if (beforeOperationListener !== null) {
-                beforeOperationListener.call(
-                    slaveSideMainInstance,
-                    'callback',
-                    callbackHandle.callbackName,
-                    argumentsAsArray);
+				try {
+					beforeOperationListener.call(
+						slaveSideMainInstance,
+						'callback',
+						callbackHandle.callbackName,
+						argumentsAsArray);
+				} catch (e) {
+					console.log('AsyncProxySlave.beforeOperationListener has thrown an exception: ' + e);
+				}
             }
             
             var transferables = extractTransferables(
@@ -201,7 +205,12 @@ function AsyncProxySlaveClosure() {
     }
     
     function defaultInstanceCreator() {
-        var TypeCtor = self[ctorName];
+		var namespacesAndCtorName = ctorName.split('.');
+		var member = self;
+		for (var i = 0; i < namespacesAndCtorName.length; ++i)
+			member = member[namespacesAndCtorName[i]];
+        var TypeCtor = member;
+		
         var bindArgs = [null].concat(getArgumentsAsArray(arguments));
         var instance = new (Function.prototype.bind.apply(TypeCtor, bindArgs));
         
@@ -223,9 +232,9 @@ function AsyncProxySlaveClosure() {
         self['Worker'] = SubWorkerEmulationForChrome;
     }
     
-    self['asyncProxyScriptBlob'].addMember(AsyncProxySlaveClosure, 'AsyncProxySlave');
+    self['asyncProxyScriptBlob'].addMember(AsyncProxySlaveClosure, 'AsyncProxySlaveSingleton');
     
     return slaveHelperSingleton;
 }
 
-var AsyncProxySlave = AsyncProxySlaveClosure();
+var AsyncProxySlaveSingleton = AsyncProxySlaveClosure();
