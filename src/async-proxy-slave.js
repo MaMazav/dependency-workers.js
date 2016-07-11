@@ -205,14 +205,19 @@ function AsyncProxySlaveClosure() {
     }
     
     function defaultInstanceCreator() {
-		var namespacesAndCtorName = ctorName.split('.');
-		var member = self;
-		for (var i = 0; i < namespacesAndCtorName.length; ++i)
-			member = member[namespacesAndCtorName[i]];
-        var TypeCtor = member;
-		
-        var bindArgs = [null].concat(getArgumentsAsArray(arguments));
-        var instance = new (Function.prototype.bind.apply(TypeCtor, bindArgs));
+        var instance;
+        try {
+            var namespacesAndCtorName = ctorName.split('.');
+            var member = self;
+            for (var i = 0; i < namespacesAndCtorName.length; ++i)
+                member = member[namespacesAndCtorName[i]];
+            var TypeCtor = member;
+            
+            var bindArgs = [null].concat(getArgumentsAsArray(arguments));
+            instance = new (Function.prototype.bind.apply(TypeCtor, bindArgs));
+        } catch (e) {
+            throw new Error('Failed locating class name ' + ctorName + ': ' + e);
+        }
         
         return instance;
     }
