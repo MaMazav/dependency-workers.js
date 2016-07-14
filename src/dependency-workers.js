@@ -15,7 +15,9 @@ function DependencyWorkersClosure() {
     
     DependencyWorkers.prototype.startTask = function startTask(
         taskKey, onData) {
-            
+        
+        var dependencyWorkers = this;
+        
         var addResult = this._taskHandles.tryAdd(taskKey, function() {
             // unique handle
             return {
@@ -33,12 +35,13 @@ function DependencyWorkersClosure() {
                 taskHandles: new LinkedList(),
                 gotDataFromDependsTaskHandles: [],
 
-                unregisterDepends: function unregisterDepends() {
+                ended: function ended() {
                     var handles = this.dependsTaskHandles;
                     for (var i = 0; i < handles.length; ++i) {
                         handles[i]['unregister']();
                     }
                     this.dependsTaskHandles = [];
+                    dependencyWorkers._taskHandles.remove(addResult.iterator);
                 }
             }
         });
@@ -92,7 +95,7 @@ function DependencyWorkersClosure() {
                 this._taskHandlesIterator = null;
                 
                 if (this._uniqueHandle.taskHandles.getCount() == 0) {
-                    this._uniqueHandle.unregisterDepends();
+                    this._uniqueHandle.ended();
                     this._uniqueHandle.taskContext['unregistered']();
                 } else if (this._localPriority === this._uniqueHandle.priority) {
                     var newPriority = this._recalculatePriority();
@@ -102,12 +105,18 @@ function DependencyWorkersClosure() {
             _recalculatePriority: function() {
                 var handles = this._uniqueHandle.taskHandles;
                 
-                var newPriority = handles[0]._localPriority;
-                for (var i = 1; i < handles.length; ++i) {
-                    newPriority = Math.max(
-                        newPriority, handles[i]._localPriority);
+                var handles = uniqueHandle.taskHandles;
+                var iterator = handles.getFirstIterator();
+                var isFirst = true;
+                var newPriority = 0;
+                while (iterator != null) {
+                    var handle = handles.getValue(iterator);
+                    if (isFirst || handle._localPriority > newPriority) {
+                        newPriority = handle._localPriority;
+                    }
+                    iterator = handles.getNextIterator(iterator);
                 }
-                
+
                 return newPriority;
             },
             _setPriorityAndNotify: function(newPriority) {
@@ -197,11 +206,12 @@ function DependencyWorkersClosure() {
         }
         
         function onTerminated() {
-            if (isTerminated) {
+            if (uniqueHandle.isTerminated) {
                 throw 'AsyncProxy.DependencyWorkers: already terminated';
             }
+            uniqueHandle.isTerminated = true;
             
-            uniqueHandle.unregisterDepends();
+            uniqueHandle.ended();
         }
     };
     
