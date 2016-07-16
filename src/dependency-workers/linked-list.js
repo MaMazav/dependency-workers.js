@@ -3,14 +3,17 @@
 var LinkedList = (function LinkedListClosure() {
 
 function LinkedList() {
-    var that = this;
-    that._first = { _prev: null, _parent: that };
-    that._last = { _next: null, _parent: that };
-    that._count = 0;
-    
-    that._last._prev = that._first;
-    that._first._next = that._last;
+    this.clear();
 }
+
+LinkedList.prototype.clear = function clear() {
+    this._first = { _prev: null, _parent: this };
+    this._last = { _next: null, _parent: this };
+    this._count = 0;
+    
+    this._last._prev = this._first;
+    this._first._next = this._last;
+};
 
 LinkedList.prototype.add = function add(value, addBefore) {
     if (addBefore === null || addBefore === undefined) {
