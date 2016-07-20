@@ -62,10 +62,10 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
     
     DependencyWorkersInternalContext.prototype.statusUpdate = function() {
         this.taskContext['statusUpdated']({
-            priority: this.priority,
-            hasListeners: this.taskHandles.getCount() > 0,
-            isIdle: !this.isActiveWorker,
-            terminatedDependsTasks: this.dependsTasksTerminatedCount
+            'priority': this.priority,
+            'hasListeners': this.taskHandles.getCount() > 0,
+            'isIdle': !this.isActiveWorker,
+            'terminatedDependsTasks': this.dependsTasksTerminatedCount
         });
     };
     
