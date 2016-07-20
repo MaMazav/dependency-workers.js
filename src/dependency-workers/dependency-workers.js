@@ -48,6 +48,15 @@ function DependencyWorkersClosure() {
         return taskHandle;
     };
     
+    DependencyWorkers.prototype.getTaskContext = function getTaskContext(taskKey) {
+        var context = this._internalContexts.getFromKey(taskKey);
+        if (context === null) {
+            return null;
+        }
+        
+        return context.taskContext;
+    };
+    
     DependencyWorkers.prototype._startNewTask = function startNewTask(
         taskKey, internalContext) {
         

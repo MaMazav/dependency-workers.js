@@ -16,7 +16,7 @@ function BlobScriptGeneratorClosure() {
     }
     
     BlobScriptGenerator.prototype.addMember = function addMember(
-        closureFunction, memberName, namespace) {
+        closureFunction, memberName, namespace, closureFunctionArgs) {
         
         if (this._blob) {
             throw new Error('Cannot add member to AsyncProxyScriptBlob after blob was used');
@@ -37,7 +37,9 @@ function BlobScriptGeneratorClosure() {
         
         this._blobChunks.push('(');
         this._blobChunks.push(closureFunction.toString());
-        this._blobChunks.push(')();');
+        this._blobChunks.push(')(');
+        this._blobChunks.push(closureFunctionArgs || '');
+        this._blobChunks.push(');');
     };
     
     BlobScriptGenerator.prototype.addStatement = function addStatement(statement) {

@@ -1,6 +1,6 @@
 'use strict';
 
-function PromiseDependencyWorkersClosure() {
+function PromiseDependencyWorkersClosure(DependencyWorkers) {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
     function PromiseDependencyWorkers(scriptsToImport, ctorName, ctorArgs, promiseInputRetreiver) {
@@ -79,9 +79,9 @@ function PromiseDependencyWorkersClosure() {
         };
     }
     
-    asyncProxyScriptBlob.addMember(PromiseDependencyWorkersClosure, 'PromiseDependencyWorkers');
+    asyncProxyScriptBlob.addMember(PromiseDependencyWorkersClosure, 'PromiseDependencyWorkers', null, 'DependencyWorkers');
     
     return PromiseDependencyWorkers;
 }
 
-var PromiseDependencyWorkers = PromiseDependencyWorkersClosure();
+var PromiseDependencyWorkers = PromiseDependencyWorkersClosure(DependencyWorkers);

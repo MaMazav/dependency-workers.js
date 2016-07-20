@@ -33,6 +33,7 @@ function ExportAsyncProxySymbolsClosure() {
         ScriptsToImportPool.prototype['getScriptsForWorkerImport'] = ScriptsToImportPool.prototype.getScriptsForWorkerImport;
         
         DependencyWorkers.prototype['startTask'] = DependencyWorkers.prototype.startTask;
+        DependencyWorkers.prototype['getTaskContext'] = DependencyWorkers.prototype.getTaskContext;
         
         DependencyWorkersTaskHandle.prototype['hasData'] = DependencyWorkersTaskHandle.prototype.hasData;
         DependencyWorkersTaskHandle.prototype['getLastData'] = DependencyWorkersTaskHandle.prototype.getLastData;
@@ -42,7 +43,7 @@ function ExportAsyncProxySymbolsClosure() {
         PromiseTask.prototype['onDependencyTaskResult'] = PromiseTask.prototype.onDependencyTaskResult;
         PromiseTask.prototype['statusUpdated'] = PromiseTask.prototype.statusUpdated;
         
-        PromiseDependencyWorkers['createInputRetreiverWrapper'] = PromiseDependencyWorkers.prototype.createInputRetreiverWrapper;
+        PromiseDependencyWorkers.prototype['startTaskPromise'] = PromiseDependencyWorkers.prototype.startTaskPromise;
     }
     
     asyncProxyScriptBlob.addMember(ExportAsyncProxySymbolsClosure, 'ExportAsyncProxySymbols');
