@@ -4,51 +4,58 @@ var HashMap = (function HashMapClosure() {
 
 function HashMap(hasher) {
     var that = this;
-    that._byKey = [];
+    that._listByKey = [];
+    that._listOfLists = new LinkedList();
     that._hasher = hasher;
+    that._count = 0;
 }
 
 HashMap.prototype.getFromKey = function getFromKey(key) {
     var hashCode = this._hasher['getHashCode'](key);
-    var hashElements = this._byKey[hashCode];
+    var hashElements = this._listByKey[hashCode];
     if (!hashElements) {
         return null;
     }
+    var list = hashElements.list;
     
-    var iterator = hashElements.getFirstIterator();
+    var iterator = list.getFirstIterator();
     while (iterator !== null) {
-        var item = hashElements.getValue(iterator);
+        var item = list.getFromIterator(iterator);
         if (this._hasher['isEqual'](item.key, key)) {
             return item.value;
         }
         
-        iterator = hashElements.getNextIterator(iterator);
+        iterator = list.getNextIterator(iterator);
     }
 
     return null;
 };
 
 HashMap.prototype.getFromIterator = function getFromIterator(iterator) {
-    return iterator._hashElements.getValue(iterator._internalIterator).value;
+    return iterator._hashElements.list.getFromIterator(iterator._internalIterator).value;
 };
 
 HashMap.prototype.tryAdd = function tryAdd(key, createValue) {
     var hashCode = this._hasher['getHashCode'](key);
-    var hashElements = this._byKey[hashCode];
+    var hashElements = this._listByKey[hashCode];
     if (!hashElements) {
-        hashElements = new LinkedList();
-        this._byKey[hashCode] = hashElements ;
+        hashElements = {
+            hashCode: hashCode,
+            list: new LinkedList(),
+            listOfListsIterator: null
+        };
+        hashElements.listOfListsIterator = this._listOfLists.add(hashElements);
+        this._listByKey[hashCode] = hashElements;
     }
     
     var iterator = {
-        _hashCode: hashCode,
         _hashElements: hashElements,
         _internalIterator: null
     };
     
-    iterator._internalIterator = hashElements.getFirstIterator();
+    iterator._internalIterator = hashElements.list.getFirstIterator();
     while (iterator._internalIterator !== null) {
-        var item = hashElements.getValue(iterator._internalIterator);
+        var item = hashElements.list.getFromIterator(iterator._internalIterator);
         if (this._hasher['isEqual'](item.key, key)) {
             return {
                 iterator: iterator,
@@ -57,14 +64,15 @@ HashMap.prototype.tryAdd = function tryAdd(key, createValue) {
             };
         }
         
-        iterator._internalIterator = hashElements.getNextIterator(iterator._internalIterator);
+        iterator._internalIterator = hashElements.list.getNextIterator(iterator._internalIterator);
     }
     
     var value = createValue();
-    iterator._internalIterator = hashElements.add({
+    iterator._internalIterator = hashElements.list.add({
         key: key,
         value: value
     });
+    ++this._count;
     
     return {
         iterator: iterator,
@@ -74,10 +82,59 @@ HashMap.prototype.tryAdd = function tryAdd(key, createValue) {
 };
 
 HashMap.prototype.remove = function remove(iterator) {
-    iterator._hashElements.remove(iterator._internalIterator);
-    if (iterator._hashElements.getCount() === 0) {
-        delete this._byKey[iterator._hashCode];
+    var oldListCount = iterator._hashElements.list.getCount();
+    iterator._hashElements.list.remove(iterator._internalIterator);
+    var newListCount = iterator._hashElements.list.getCount();
+    
+    this._count += (newListCount - oldListCount);
+    if (newListCount === 0) {
+        this._listOfLists.remove(iterator._hashElements.listOfListsIterator);
+        delete this._listByKey[iterator._hashElements.hashCode];
     }
+};
+
+HashMap.prototype.getCount = function getCount() {
+    return this._count;
+};
+
+HashMap.prototype.getFirstIterator = function getFirstIterator() {
+    var firstListIterator = this._listOfLists.getFirstIterator();
+    var firstHashElements = null;
+    var firstInternalIterator = null;
+    if (firstListIterator !== null) {
+        firstHashElements = this._listOfLists.getFromIterator(firstListIterator);
+        firstInternalIterator = firstHashElements.list.getFirstIterator();
+    }
+    if (firstInternalIterator === null) {
+        return null;
+    }
+    
+    return {
+        _hashElements: firstHashElements,
+        _internalIterator: firstInternalIterator
+    };
+};
+
+HashMap.prototype.getNextIterator = function getNextIterator(iterator) {
+    var nextIterator = {
+        _hashElements: iterator._hashElements,
+        _internalIterator: iterator._hashElements.list.getNextIterator(
+            iterator._internalIterator)
+    };
+    
+    while (nextIterator._internalIterator === null) {
+        var nextListOfListsIterator = this._listOfLists.getNextIterator(
+            iterator._hashElements.listOfListsIterator);
+        if (nextListOfListsIterator === null) {
+            return null;
+        }
+        
+        nextIterator._hashElements = this._listOfLists.getFromIterator(
+            nextListOfListsIterator);
+        nextIterator._internalIterator =
+            nextIterator._hashElements.list.getFirstIterator();
+    }
+    return nextIterator;
 };
 
 return HashMap;

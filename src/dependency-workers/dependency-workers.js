@@ -41,7 +41,11 @@ function DependencyWorkersClosure() {
             internalContext, callbacks);
         
         if (addResult.isNew) {
-            internalContext.setParentList(this._internalContexts, addResult.iterator);
+            internalContext.initialize(
+                this,
+                this._internalContexts,
+                addResult.iterator,
+                this._workerInputRetreiver);
             this._startNewTask(taskKey, internalContext);
         }
         
@@ -62,67 +66,22 @@ function DependencyWorkersClosure() {
         
         taskContext = this._workerInputRetreiver['createTaskContext'](taskKey, {
             'onDataReadyToProcess': onDataReadyToProcess,
-            'onTerminated': internalContext.onTerminatedBound
+            'onTerminated': internalContext.onTerminatedBound,
+            'registerTaskDependency': internalContext.registerTaskDependencyBound
         });
         internalContext.taskContext = taskContext;
-        
-        var dependsOnTasks = taskContext['dependsOnTasks'];
         
         if (!taskContext['statusUpdated']) {
             throw 'AsyncProxy.DependencyWorkers: missing ' +
                 'taskContext.statusUpdated()';
         }
-        if (dependsOnTasks && !taskContext['onDependencyTaskResult']) {
-            throw 'AsyncProxy.DependencyWorkers: Cannot accept ' +
-                'dependsOnTasks without onDependencyTaskResult in ' +
-                'taskContext';
+        if (!taskContext['onDependencyTaskResult']) {
+            throw 'AsyncProxy.DependencyWorkers: missing ' +
+                'taskContext.onDependencyTaskResult()';
         }
         
         var that = this;
         
-        internalContext.gotDataFromDependsTaskHandles =
-            new Array(dependsOnTasks.length);
-        for (var i = 0; i < dependsOnTasks.length; ++i) {
-            internalContext.gotDataFromDependsTaskHandles[i] = false;
-            var dependencyTaskHandle;
-            
-            (function closure(index) {
-                var isTerminated = false;
-                
-                dependencyTaskHandle = that.startTask(dependsOnTasks[index], {
-                    'onData': onDependencyTaskResult,
-                    'onTerminated': onDependencyTaskTerminated
-                });
-                
-                function onDependencyTaskResult(data) {
-                    internalContext.taskContext['onDependencyTaskResult'](data, dependsOnTasks[index]);
-                    internalContext.gotDataFromDependsTaskHandles[index] = true;
-                }
-                
-                function onDependencyTaskTerminated() {
-                    if (isTerminated) {
-                        throw 'AsyncProxy.DependencyWorkers: Double termination';
-                    }
-                    isTerminated = true;
-                    internalContext.dependsTaskTerminated();
-                }
-            })(/*index=*/i);
-            
-            internalContext.dependsTaskHandles.push(dependencyTaskHandle);
-        }
-        
-        setTimeout(function() {
-            for (var i = 0; i < internalContext.dependsTaskHandles.length; ++i) {
-                var handle = internalContext.dependsTaskHandles[i];
-                if (!internalContext.gotDataFromDependsTaskHandles[i] &&
-                    handle.hasData()) {
-                    
-                    taskContext['onDependencyTaskResult'](
-                        handle.getLastData(), dependsOnTasks[i]);
-                }
-            }
-        });
-
         function onDataReadyToProcess(newDataToProcess) {
             if (internalContext.isTerminated) {
                 throw 'AsyncProxy.DependencyWorkers: already terminated';
@@ -163,7 +122,7 @@ function DependencyWorkersClosure() {
                 var handles = internalContext.taskHandles;
                 var iterator = handles.getFirstIterator();
                 while (iterator != null) {
-                    var handle = handles.getValue(iterator);
+                    var handle = handles.getFromIterator(iterator);
                     iterator = handles.getNextIterator(iterator);
                     
                     handle._callbacks['onData'](processedData, taskKey);

@@ -47,7 +47,7 @@ LinkedList.prototype.remove = function remove(iterator) {
     iterator._parent = null;
 };
 
-LinkedList.prototype.getValue = function getValue(iterator) {
+LinkedList.prototype.getFromIterator = function getFromIterator(iterator) {
     this._validateIteratorOfThis(iterator);
     
     return iterator._value;

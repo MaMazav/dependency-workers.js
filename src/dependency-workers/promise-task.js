@@ -27,6 +27,10 @@ function PromiseTaskClosure() {
         that._waitingFor = WAITING_FOR_DEPENDS_TASKS;
         
         that._checkIfDependsTaskDone();
+        
+        for (var i = 0; i < dependsOnTasks.length; ++i) {
+            callbacks['registerTaskDependency'](dependsOnTasks[i]);
+        }
     }
     
     Object.defineProperty(PromiseTask.prototype, 'dependsOnTasks', {
