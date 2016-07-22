@@ -42,11 +42,12 @@ function DependencyWorkersClosure() {
         
         if (addResult.isNew) {
             internalContext.initialize(
+                taskKey,
                 this,
                 this._internalContexts,
                 addResult.iterator,
                 this._workerInputRetreiver);
-            this._startNewTask(taskKey, internalContext);
+            this._startNewTask(internalContext);
         }
         
         return taskHandle;
@@ -62,13 +63,15 @@ function DependencyWorkersClosure() {
     };
     
     DependencyWorkers.prototype._startNewTask = function startNewTask(
-        taskKey, internalContext) {
+        internalContext) {
         
-        taskContext = this._workerInputRetreiver['createTaskContext'](taskKey, {
-            'onDataReadyToProcess': onDataReadyToProcess,
-            'onTerminated': internalContext.onTerminatedBound,
-            'registerTaskDependency': internalContext.registerTaskDependencyBound
-        });
+        taskContext = this._workerInputRetreiver['createTaskContext'](
+            internalContext.taskKey, {
+                'onDataReadyToProcess': onDataReadyToProcess,
+                'onTerminated': internalContext.onTerminatedBound,
+                'registerTaskDependency': internalContext.registerTaskDependencyBound
+            }
+        );
         internalContext.taskContext = taskContext;
         
         if (!taskContext['statusUpdated']) {
@@ -82,22 +85,31 @@ function DependencyWorkersClosure() {
         
         var that = this;
         
-        function onDataReadyToProcess(newDataToProcess) {
+        function onDataReadyToProcess(newDataToProcess, isDisableWorker) {
             if (internalContext.isTerminated) {
                 throw 'AsyncProxy.DependencyWorkers: already terminated';
             } else if (internalContext.isActiveWorker) {
                 internalContext.pendingDataForWorker = newDataToProcess;
                 internalContext.isPendingDataForWorker = true;
+                internalContext.pendingDataIsDisableWorker = isDisableWorker;
             } else {
-                that._startWorker(internalContext, newDataToProcess, taskKey);
+                that._startWorker(
+                    internalContext,
+                    newDataToProcess,
+                    isDisableWorker);
             }
         }
     };
     
     DependencyWorkers.prototype._startWorker = function startWorker(
-        internalContext, dataToProcess, taskKey) {
+        internalContext, dataToProcess, isDisableWorker) {
             
         var that = this;
+        
+        if (isDisableWorker) {
+            internalContext.newData(dataToProcess);
+            return;
+        }
         
         var worker;
         if (that._workerPool.length > 0) {
@@ -113,30 +125,20 @@ function DependencyWorkersClosure() {
         internalContext.statusUpdate();
         worker.callFunction(
                 'start',
-                [dataToProcess, taskKey],
+                [dataToProcess, internalContext.taskKey],
                 {'isReturnPromise': true})
             .then(function(processedData) {
-                internalContext.hasProcessedData = true;
-                internalContext.lastProcessedData = processedData;
-                
-                var handles = internalContext.taskHandles;
-                var iterator = handles.getFirstIterator();
-                while (iterator != null) {
-                    var handle = handles.getFromIterator(iterator);
-                    iterator = handles.getNextIterator(iterator);
-                    
-                    handle._callbacks['onData'](processedData, taskKey);
-                }
-                
+                internalContext.newData(processedData);
                 return processedData;
             }).catch(function(e) {
                 console.log('Error in DependencyWorkers\' worker: ' + e);
                 return e;
             }).then(function(result) {
                 that._workerPool.push(worker);
+                internalContext.isActiveWorker = false;
+                internalContext.statusUpdate();
+                
                 if (!internalContext.isPendingDataForWorker) {
-                    internalContext.isActiveWorker = false;
-                    internalContext.statusUpdate();
                     return;
                 }
                 
@@ -144,7 +146,10 @@ function DependencyWorkersClosure() {
                 internalContext.isPendingDataForWorker = false;
                 internalContext.pendingDataForWorker = null;
                 
-                that._startWorker(internalContext, dataToProcess);
+                that._startWorker(
+                    internalContext,
+                    dataToProcess,
+                    internalContext.pendingDataIsDisableWorker);
                 
                 return result;
             });

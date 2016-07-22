@@ -13,6 +13,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this.isActiveWorker = false;
         this.isPendingDataForWorker = false;
         this.pendingDataForWorker = null;
+        this.pendingDataIsDisableWorker = false;
         
         this.taskContext = null;
         this.taskHandles = new LinkedList();
@@ -21,6 +22,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this.registerTaskDependencyBound = this._registerTaskDependency.bind(
             this);
 
+        this.taskKey = null;
         this._dependsTasksTerminatedCount = 0;
         this._parentDependencyWorkers = null;
         this._parentList = null;
@@ -29,8 +31,9 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 	}
     
     DependencyWorkersInternalContext.prototype.initialize = function(
-            dependencyWorkers, list, iterator, hasher) {
+            taskKey, dependencyWorkers, list, iterator, hasher) {
                 
+        this.taskKey = taskKey;
         this._parentDependencyWorkers = dependencyWorkers;
         this._parentList = list;
         this._parentIterator = iterator;
@@ -107,6 +110,20 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         }
 
         return newPriority;
+    };
+    
+    DependencyWorkersInternalContext.prototype.newData = function(data) {
+        this.hasProcessedData = true;
+        this.lastProcessedData = data;
+        
+        var handles = this.taskHandles;
+        var iterator = handles.getFirstIterator();
+        while (iterator != null) {
+            var handle = handles.getFromIterator(iterator);
+            iterator = handles.getNextIterator(iterator);
+            
+            handle._callbacks['onData'](data, this.taskKey);
+        }
     };
     
     DependencyWorkersInternalContext.prototype._onTerminated = function() {
