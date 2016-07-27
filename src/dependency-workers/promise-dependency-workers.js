@@ -4,25 +4,8 @@ function PromiseDependencyWorkersClosure(DependencyWorkers) {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
     function PromiseDependencyWorkers(scriptsToImport, ctorName, ctorArgs, promiseInputRetreiver) {
-        var inputRetreiver = createInputRetreiverWrapper(promiseInputRetreiver);
+        var inputRetreiver = new PromiseWrapperInputRetreiver(promiseInputRetreiver);
         DependencyWorkers.call(this, scriptsToImport, ctorName, ctorArgs, inputRetreiver);
-        
-        if (!promiseInputRetreiver['getDependsOnTasks']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'promiseInputRetreiver.getDependsOnTasks() method';
-        }
-        if (!promiseInputRetreiver['preWorkerProcess']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'promiseInputRetreiver.preWorkerProcess() method';
-        }
-        if (!promiseInputRetreiver['getHashCode']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'promiseInputRetreiver.getHashCode() method';
-        }
-        if (!promiseInputRetreiver['isEqual']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'promiseInputRetreiver.isEqual() method';
-        }
     }
     
     PromiseDependencyWorkers.prototype = Object.create(DependencyWorkers.prototype);
@@ -56,28 +39,6 @@ function PromiseDependencyWorkersClosure(DependencyWorkers) {
             }
         });
     };
-    
-    function createInputRetreiverWrapper(promiseInputRetreiver) {
-        return {
-            _promiseInputRetreiver: promiseInputRetreiver,
-            'createTaskContext': function(taskKey, callbacks) {
-                var that = this;
-                var dependsOnTasks = that._promiseInputRetreiver['getDependsOnTasks'](taskKey);
-                    
-                return new PromiseTask(
-                    taskKey, dependsOnTasks, that._promiseInputRetreiver, callbacks);
-            },
-            'getHashCode': function(key) {
-                var that = this;
-                return that._promiseInputRetreiver['getHashCode'](key);
-            },
-            
-            'isEqual': function(key1, key2) {
-                var that = this;
-                return that._promiseInputRetreiver['isEqual'](key1, key2);
-            }
-        };
-    }
     
     asyncProxyScriptBlob.addMember(PromiseDependencyWorkersClosure, 'PromiseDependencyWorkers', null, 'DependencyWorkers');
     
