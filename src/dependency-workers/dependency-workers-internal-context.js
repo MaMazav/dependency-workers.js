@@ -10,7 +10,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this.lastProcessedData = null;
         this.hasProcessedData = false;
         
-        this.isActiveWorker = false;
+        this.waitingForWorkerResult = false;
         this.isPendingDataForWorker = false;
         this.pendingDataForWorker = null;
         this.pendingDataIsDisableWorker = false;
@@ -88,7 +88,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         var status = {
             'priority': this.priority,
             'hasListeners': this.taskHandles.getCount() > 0,
-            'isIdle': !this.isActiveWorker,
+            'isWaitingForWorkerResult': this.waitingForWorkerResult,
             'terminatedDependsTasks': this._dependsTasksTerminatedCount,
             'dependsTasks': this._dependsTaskHandles.getCount()
         };
@@ -129,10 +129,10 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
     DependencyWorkersInternalContext.prototype._onTerminated = function() {
         if (this.isTerminated) {
             throw 'AsyncProxy.DependencyWorkers: already terminated';
-        } else if (this.isActiveWorker) {
+        } else if (this.waitingForWorkerResult) {
             throw 'AsyncProxy.DependencyWorkers: Cannot terminate while ' +
                 'task is processing. Wait for statusUpdated() callback ' +
-                'with isIdle == true';
+                'with isWaitingForWorkerResult == false';
         }
         
         this.isTerminated = true;

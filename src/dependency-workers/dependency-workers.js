@@ -88,7 +88,7 @@ function DependencyWorkersClosure() {
         function onDataReadyToProcess(newDataToProcess, isDisableWorker) {
             if (internalContext.isTerminated) {
                 throw 'AsyncProxy.DependencyWorkers: already terminated';
-            } else if (internalContext.isActiveWorker) {
+            } else if (internalContext.waitingForWorkerResult) {
                 internalContext.pendingDataForWorker = newDataToProcess;
                 internalContext.isPendingDataForWorker = true;
                 internalContext.pendingDataIsDisableWorker = isDisableWorker;
@@ -121,8 +121,11 @@ function DependencyWorkersClosure() {
                 that._ctorArgs);
         }
         
-        internalContext.isActiveWorker = true;
-        internalContext.statusUpdate();
+        if (!internalContext.waitingForWorkerResult) {
+            internalContext.waitingForWorkerResult = true;
+            internalContext.statusUpdate();
+        }
+        
         worker.callFunction(
                 'start',
                 [dataToProcess, internalContext.taskKey],
@@ -135,10 +138,10 @@ function DependencyWorkersClosure() {
                 return e;
             }).then(function(result) {
                 that._workerPool.push(worker);
-                internalContext.isActiveWorker = false;
-                internalContext.statusUpdate();
                 
                 if (!internalContext.isPendingDataForWorker) {
+                    internalContext.waitingForWorkerResult = false;
+                    internalContext.statusUpdate();
                     return;
                 }
                 

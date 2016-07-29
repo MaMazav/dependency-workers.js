@@ -70,11 +70,11 @@ function PromiseTaskClosure() {
     };
     
     PromiseTask.prototype.statusUpdated = function(status) {
-        if (!status['hasListeners'] && status['isIdle']) {
+        if (!status['hasListeners'] && !status['isWaitingForWorkerResult']) {
             this._terminate('No listeners');
         } else if (this._waitingFor === WAITING_FOR_DEPENDS_TASKS) {
             this._checkIfDependsTaskDone(status);
-        } else if (status['isIdle'] && this._waitingFor === WAITING_FOR_WORKER) {
+        } else if (!status['isWaitingForWorkerResult'] && this._waitingFor === WAITING_FOR_WORKER) {
             this._terminate();
         }
     };
