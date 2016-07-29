@@ -25,8 +25,8 @@ function SchedulerWrapperInputRetreiverClosure() {
     SchedulerWrapperInputRetreiver.prototype.createTaskContext =
             function createTaskContext(taskKey, callbacks) {
         
-        var wrapperTask = new SchedulerTask(scheduler, taskKey, callbacks);
-        var wrappedTask = this._inputRetreiver.createTaskContext(
+        var wrapperTask = new SchedulerTask(this._scheduler, taskKey, callbacks);
+        var wrappedTask = this._inputRetreiver['createTaskContext'](
             taskKey, wrapperTask.getCallbacksForWrappedTask());
             
         wrapperTask.setWrappedContext(wrappedTask);
