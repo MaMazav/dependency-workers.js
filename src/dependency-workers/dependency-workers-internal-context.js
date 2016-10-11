@@ -23,6 +23,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
             this);
 
         this.taskKey = null;
+        this.workerType = null;
         this._dependsTasksTerminatedCount = 0;
         this._parentDependencyWorkers = null;
         this._parentList = null;
@@ -31,13 +32,15 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 	}
     
     DependencyWorkersInternalContext.prototype.initialize = function(
-            taskKey, dependencyWorkers, list, iterator, hasher) {
+            taskKey, workerType, dependencyWorkers, list, iterator /*, hasher*/) {
                 
         this.taskKey = taskKey;
+        this.workerType = workerType;
         this._parentDependencyWorkers = dependencyWorkers;
         this._parentList = list;
         this._parentIterator = iterator;
-        this._dependsTaskHandles = new HashMap(hasher);
+        //this._dependsTaskHandles = new HashMap(hasher);
+        this._dependsTaskHandles = new JsBuiltinHashMap();
     };
     
     DependencyWorkersInternalContext.prototype.ended = function() {

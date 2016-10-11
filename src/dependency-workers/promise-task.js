@@ -47,7 +47,8 @@ function PromiseTaskClosure() {
         }
         
         if (this._resultIndexByTaskKey === null) {
-            this._resultIndexByTaskKey = new HashMap(this._workerInputRetreiver);
+            //this._resultIndexByTaskKey = new HashMap(this._workerInputRetreiver);
+            this._resultIndexByTaskKey = new JsBuiltinHashMap();
             for (var i = 0; i < this._dependsOnTasks.length; ++i) {
                 this._resultIndexByTaskKey.tryAdd(
                     this._dependsOnTasks[i],

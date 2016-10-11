@@ -3,9 +3,14 @@
 function SchedulerDependencyWorkersClosure(DependencyWorkers) {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
-    function SchedulerDependencyWorkers(scheduler, scriptsToImport, ctorName, ctorArgs, inputRetreiver) {
+    function SchedulerDependencyWorkers(scheduler, inputRetreiver) {
         var wrapperInputRetreiver = new SchedulerWrapperInputRetreiver(scheduler, inputRetreiver);
-        DependencyWorkers.call(this, scriptsToImport, ctorName, ctorArgs, wrapperInputRetreiver);
+        DependencyWorkers.call(this, wrapperInputRetreiver);
+        
+        if (!inputRetreiver['createTaskContext']) {
+            throw 'AsyncProxy.DependencyWorkers: No ' +
+                'inputRetreiver.createTaskContext() method';
+        }
     }
     
     SchedulerDependencyWorkers.prototype = Object.create(DependencyWorkers.prototype);
@@ -16,36 +21,6 @@ function SchedulerDependencyWorkersClosure(DependencyWorkers) {
         
         var taskContext = schedulerTaskContext.getWrappedContext();
         return taskContext;
-    };
-    
-    SchedulerDependencyWorkers.prototype.startTaskPromise =
-            function startTaskPromise(taskKey) {
-        
-        var that = this;
-        return new Promise(function(resolve, reject) {
-            var taskHandle = that.startTask(
-                taskKey, { 'onData': onData, 'onTerminated': onTerminated });
-            
-            var hasData = taskHandle.hasData();
-            var result;
-            if (hasData) {
-                result = taskHandle.getLastData();
-            }
-            
-            function onData(data) {
-                hasData = true;
-                result = data;
-            }
-            
-            function onTerminated() {
-                if (hasData) {
-                    resolve(result);
-                } else {
-                    reject('AsyncProxy.PromiseDependencyWorkers: Internal ' +
-                        'error - task terminated but no data returned');
-                }
-            }
-        });
     };
     
     asyncProxyScriptBlob.addMember(SchedulerDependencyWorkersClosure, 'SchedulerDependencyWorkers', null, 'DependencyWorkers');

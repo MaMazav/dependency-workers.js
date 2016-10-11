@@ -4,6 +4,11 @@ function PromiseWrapperInputRetreiverClosure() {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
     function PromiseWrapperInputRetreiver(promiseInputRetreiver) {
+        WrapperInputRetreiverBase.call(this, promiseInputRetreiver);
+
+        var that = this;
+        that._promiseInputRetreiver = promiseInputRetreiver;
+        
         if (!promiseInputRetreiver['getDependsOnTasks']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'promiseInputRetreiver.getDependsOnTasks() method';
@@ -12,19 +17,10 @@ function PromiseWrapperInputRetreiverClosure() {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'promiseInputRetreiver.preWorkerProcess() method';
         }
-        if (!promiseInputRetreiver['getHashCode']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'promiseInputRetreiver.getHashCode() method';
-        }
-        if (!promiseInputRetreiver['isEqual']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'promiseInputRetreiver.isEqual() method';
-        }
-
-        var that = this;
-        that._promiseInputRetreiver = promiseInputRetreiver;
     }
     
+    PromiseWrapperInputRetreiver.prototype = Object.create(WrapperInputRetreiverBase.prototype);
+
     PromiseWrapperInputRetreiver.prototype.createTaskContext = function(
             taskKey, callbacks) {
                 
@@ -33,14 +29,6 @@ function PromiseWrapperInputRetreiverClosure() {
             
         return new PromiseTask(
             taskKey, dependsOnTasks, this._promiseInputRetreiver, callbacks);
-    };
-    
-    PromiseWrapperInputRetreiver.prototype.getHashCode = function(key) {
-        return this._promiseInputRetreiver['getHashCode'](key);
-    };
-    
-    PromiseWrapperInputRetreiver.prototype.isEqual = function(key1, key2) {
-        return this._promiseInputRetreiver['isEqual'](key1, key2);
     };
     
     asyncProxyScriptBlob.addMember(

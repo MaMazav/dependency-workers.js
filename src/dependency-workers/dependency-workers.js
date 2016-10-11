@@ -3,27 +3,25 @@
 function DependencyWorkersClosure() {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
-    function DependencyWorkers(scriptsToImport, ctorName, ctorArgs, workerInputRetreiver) {
+    function DependencyWorkers(workerInputRetreiver) {
         var that = this;
         that._workerInputRetreiver = workerInputRetreiver;
-        that._ctorName = ctorName;
-        that._ctorArgs = ctorArgs;
-        that._scriptsToImport = scriptsToImport;
-        that._internalContexts = new HashMap(/*hasher=*/workerInputRetreiver);
-        that._workerPool = [];
+        //that._internalContexts = new HashMap(/*hasher=*/workerInputRetreiver);
+        that._internalContexts = new JsBuiltinHashMap();
+        that._workerPoolByWorkerType = [];
         
         if (!workerInputRetreiver['createTaskContext']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'workerInputRetreiver.createTaskContext() method';
         }
-        if (!workerInputRetreiver['getHashCode']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'workerInputRetreiver.getHashCode() method';
-        }
-        if (!workerInputRetreiver['isEqual']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'workerInputRetreiver.isEqual() method';
-        }
+        //if (!workerInputRetreiver['getHashCode']) {
+        //    throw 'AsyncProxy.DependencyWorkers: No ' +
+        //        'workerInputRetreiver.getHashCode() method';
+        //}
+        //if (!workerInputRetreiver['isEqual']) {
+        //    throw 'AsyncProxy.DependencyWorkers: No ' +
+        //        'workerInputRetreiver.isEqual() method';
+        //}
     }
     
     DependencyWorkers.prototype.startTask = function startTask(
@@ -41,8 +39,10 @@ function DependencyWorkersClosure() {
             internalContext, callbacks);
         
         if (addResult.isNew) {
+            var workerType = this._workerInputRetreiver['getWorkerTypeByTaskKey'](taskKey);
             internalContext.initialize(
                 taskKey,
+                workerType,
                 this,
                 this._internalContexts,
                 addResult.iterator,
@@ -51,6 +51,36 @@ function DependencyWorkersClosure() {
         }
         
         return taskHandle;
+    };
+    
+    DependencyWorkers.prototype.startTaskPromise =
+            function startTaskPromise(taskKey) {
+        
+        var that = this;
+        return new Promise(function(resolve, reject) {
+            var taskHandle = that.startTask(
+                taskKey, { 'onData': onData, 'onTerminated': onTerminated });
+            
+            var hasData = taskHandle.hasData();
+            var result;
+            if (hasData) {
+                result = taskHandle.getLastData();
+            }
+            
+            function onData(data) {
+                hasData = true;
+                result = data;
+            }
+            
+            function onTerminated() {
+                if (hasData) {
+                    resolve(result);
+                } else {
+                    reject('AsyncProxy.DependencyWorkers: Internal ' +
+                        'error - task terminated but no data returned');
+                }
+            }
+        });
     };
     
     DependencyWorkers.prototype.getTaskContext = function getTaskContext(taskKey) {
@@ -112,13 +142,20 @@ function DependencyWorkersClosure() {
         }
         
         var worker;
-        if (that._workerPool.length > 0) {
-            worker = that._workerPool.pop();
+        var workerPool = that._workerPoolByWorkerType[internalContext.workerType];
+        if (!workerPool) {
+            workerPool = [];
+            that._workerPoolByWorkerType[internalContext.workerType] = workerPool;
+        }
+        if (workerPool.length > 0) {
+            worker = workerPool.pop();
         } else {
+            var workerArgs = that._workerInputRetreiver['getWorkerInitializationArgs'](
+                internalContext.workerType);
             worker = new AsyncProxyMaster(
-                that._scriptsToImport,
-                that._ctorName,
-                that._ctorArgs);
+                workerArgs['scriptsToImport'],
+                workerArgs['ctorName'],
+                workerArgs['ctorArgs']);
         }
         
         if (!internalContext.waitingForWorkerResult) {
@@ -137,7 +174,7 @@ function DependencyWorkersClosure() {
                 console.log('Error in DependencyWorkers\' worker: ' + e);
                 return e;
             }).then(function(result) {
-                that._workerPool.push(worker);
+                workerPool.push(worker);
                 
                 if (!internalContext.isPendingDataForWorker) {
                     internalContext.waitingForWorkerResult = false;

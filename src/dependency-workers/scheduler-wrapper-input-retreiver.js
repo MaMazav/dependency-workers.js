@@ -4,23 +4,17 @@ function SchedulerWrapperInputRetreiverClosure() {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
     function SchedulerWrapperInputRetreiver(scheduler, inputRetreiver) {
+        WrapperInputRetreiverBase.call(this, inputRetreiver);
+        var that = this;
+        that._scheduler = scheduler;
+
         if (!inputRetreiver['createTaskContext']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'inputRetreiver.createTaskContext() method';
         }
-        if (!inputRetreiver['getHashCode']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'inputRetreiver.getHashCode() method';
-        }
-        if (!inputRetreiver['isEqual']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'inputRetreiver.isEqual() method';
-        }
-
-        var that = this;
-        that._inputRetreiver = inputRetreiver;
-        that._scheduler = scheduler;
     }
+    
+    SchedulerWrapperInputRetreiver.prototype = Object.create(WrapperInputRetreiverBase.prototype);
     
     SchedulerWrapperInputRetreiver.prototype.createTaskContext =
             function createTaskContext(taskKey, callbacks) {
@@ -31,14 +25,6 @@ function SchedulerWrapperInputRetreiverClosure() {
             
         wrapperTask.setWrappedContext(wrappedTask);
         return wrapperTask;
-    };
-    
-    SchedulerWrapperInputRetreiver.prototype.getHashCode = function(key) {
-        return this._inputRetreiver['getHashCode'](key);
-    };
-    
-    SchedulerWrapperInputRetreiver.prototype.isEqual = function(key1, key2) {
-        return this._inputRetreiver['isEqual'](key1, key2);
     };
     
     asyncProxyScriptBlob.addMember(
