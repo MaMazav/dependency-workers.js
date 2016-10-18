@@ -1,6 +1,6 @@
 'use strict';
 
-function SchedulerWrapperInputRetreiverClosure() {
+function SchedulerWrapperInputRetreiverClosure(WrapperInputRetreiverBase) {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
     function SchedulerWrapperInputRetreiver(scheduler, inputRetreiver) {
@@ -28,9 +28,9 @@ function SchedulerWrapperInputRetreiverClosure() {
     };
     
     asyncProxyScriptBlob.addMember(
-        SchedulerWrapperInputRetreiverClosure, 'SchedulerWrapperInputRetreiver');
+        SchedulerWrapperInputRetreiverClosure, 'SchedulerWrapperInputRetreiver', null, 'WrapperInputRetreiverBase');
     
     return SchedulerWrapperInputRetreiver;
 }
 
-var SchedulerWrapperInputRetreiver = SchedulerWrapperInputRetreiverClosure();
+var SchedulerWrapperInputRetreiver = SchedulerWrapperInputRetreiverClosure(WrapperInputRetreiverBase);

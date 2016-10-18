@@ -1,6 +1,6 @@
 'use strict';
 
-function PromiseWrapperInputRetreiverClosure() {
+function PromiseWrapperInputRetreiverClosure(WrapperInputRetreiverBase) {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
     function PromiseWrapperInputRetreiver(promiseInputRetreiver) {
@@ -32,9 +32,9 @@ function PromiseWrapperInputRetreiverClosure() {
     };
     
     asyncProxyScriptBlob.addMember(
-        PromiseWrapperInputRetreiverClosure, 'PromiseWrapperInputRetreiver');
+        PromiseWrapperInputRetreiverClosure, 'PromiseWrapperInputRetreiver', null, 'WrapperInputRetreiverBase');
     
     return PromiseWrapperInputRetreiver;
 }
 
-var PromiseWrapperInputRetreiver = PromiseWrapperInputRetreiverClosure();
+var PromiseWrapperInputRetreiver = PromiseWrapperInputRetreiverClosure(WrapperInputRetreiverBase);
