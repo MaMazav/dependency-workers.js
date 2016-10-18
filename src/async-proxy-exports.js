@@ -48,16 +48,17 @@ function ExportAsyncProxySymbolsClosure() {
         
         //WrapperInputRetreiverBase.prototype['getHashCode'] = WrapperInputRetreiverBase.prototype.getHashCode;
         //WrapperInputRetreiverBase.prototype['isEqual'] = WrapperInputRetreiverBase.prototype.isEqual;
-        WrapperInputRetreiverBase.prototype['getWorkerTypeByTaskKey'] = WrapperInputRetreiverBase.prototype.getWorkerTypeByTaskKey;
-        WrapperInputRetreiverBase.prototype['getWorkerInitializationArgs'] = WrapperInputRetreiverBase.prototype.getWorkerInitializationArgs;
+        WrapperInputRetreiverBase.prototype['getTaskOptions'] = WrapperInputRetreiverBase.prototype.getTaskOptions;
 
         PromiseTask.prototype['onDependencyTaskResult'] = PromiseTask.prototype.onDependencyTaskResult;
         PromiseTask.prototype['statusUpdated'] = PromiseTask.prototype.statusUpdated;
+        PromiseTask.prototype['getTaskType'] = PromiseTask.prototype.getTaskType;
         
         PromiseWrapperInputRetreiver.prototype['createTaskContext'] = PromiseWrapperInputRetreiver.prototype.createTaskContext;
         
         SchedulerTask.prototype['onDependencyTaskResult'] = SchedulerTask.prototype.onDependencyTaskResult;
         SchedulerTask.prototype['statusUpdated'] = SchedulerTask.prototype.statusUpdated;
+        SchedulerTask.prototype['getTaskType'] = SchedulerTask.prototype.getTaskType;
         
         SchedulerWrapperInputRetreiver.prototype['createTaskContext'] = SchedulerWrapperInputRetreiver.prototype.createTaskContext;
 

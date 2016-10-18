@@ -35,6 +35,10 @@ function SchedulerTaskClosure() {
             throw 'AsyncProxy.DependencyWorkers: missing ' +
                 'taskContext.onDependencyTaskResult()';
         }
+        if (!taskContext['getTaskType']) {
+            throw 'AsyncProxy.DependencyWorkers: missing ' +
+                'taskContext.getTaskType()';
+        }
         
         this._taskContext = taskContext;
     };
@@ -61,6 +65,10 @@ function SchedulerTaskClosure() {
             function onDependencyTaskResult(data, key) {
         
         return this._taskContext['onDependencyTaskResult'](data, key);
+    };
+    
+    SchedulerTask.prototype.getTaskType = function getTaskType() {
+        return this._taskContext['getTaskType']();
     };
     
     SchedulerTask.prototype._onDataReadyToProcess = function onDataReadyToProcess(

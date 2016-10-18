@@ -12,12 +12,9 @@ function WrapperInputRetreiverBaseClosure() {
         //    throw 'AsyncProxy.DependencyWorkers: No ' +
         //        'inputRetreiver.isEqual() method';
         //}
-        if (!inputRetreiver['getWorkerTypeByTaskKey']) {
+        if (!inputRetreiver['getTaskOptions']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
-                'inputRetreiver.getWorkerTypeByTaskKey() method';
-        }if (!inputRetreiver['getWorkerInitializationArgs']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'inputRetreiver.getWorkerInitializationArgs() method';
+                'inputRetreiver.getTaskOptions() method';
         }
 
         var that = this;
@@ -38,12 +35,9 @@ function WrapperInputRetreiverBaseClosure() {
     //    return this._inputRetreiver['isEqual'](key1, key2);
     //};
     
-    WrapperInputRetreiverBase.prototype.getWorkerTypeByTaskKey = function(key) {
-        return this._inputRetreiver['getWorkerTypeByTaskKey'](key);
-    };
     
-    WrapperInputRetreiverBase.prototype.getWorkerInitializationArgs = function(workerType) {
-        return this._inputRetreiver['getWorkerInitializationArgs'](workerType);
+    WrapperInputRetreiverBase.prototype.getTaskOptions = function(taskType) {
+        return this._inputRetreiver['getTaskOptions'](taskType);
     };
     
     asyncProxyScriptBlob.addMember(

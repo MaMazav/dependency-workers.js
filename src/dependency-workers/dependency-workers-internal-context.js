@@ -19,11 +19,11 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this.taskHandles = new LinkedList();
         
         this.onTerminatedBound = this._onTerminated.bind(this);
-        this.registerTaskDependencyBound = this._registerTaskDependency.bind(
-            this);
+        this.registerTaskDependencyBound =
+            this._registerTaskDependency.bind(this);
 
         this.taskKey = null;
-        this.workerType = null;
+        this.taskType = null;
         this._dependsTasksTerminatedCount = 0;
         this._parentDependencyWorkers = null;
         this._parentList = null;
@@ -32,10 +32,9 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 	}
     
     DependencyWorkersInternalContext.prototype.initialize = function(
-            taskKey, workerType, dependencyWorkers, list, iterator /*, hasher*/) {
+            taskKey, dependencyWorkers, list, iterator /*, hasher*/) {
                 
         this.taskKey = taskKey;
-        this.workerType = workerType;
         this._parentDependencyWorkers = dependencyWorkers;
         this._parentList = list;
         this._parentIterator = iterator;

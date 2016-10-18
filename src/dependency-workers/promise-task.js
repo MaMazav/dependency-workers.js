@@ -80,6 +80,10 @@ function PromiseTaskClosure() {
         }
     };
     
+    PromiseTask.prototype.getTaskType = function() {
+        return 0;
+    };
+    
     PromiseTask.prototype._checkIfDependsTaskDone = function(status) {
         var terminatedDependsTasks = 0;
         if (status) {
