@@ -3,6 +3,7 @@
 function ExportAsyncProxySymbolsClosure() {
     function ExportAsyncProxySymbols(
             SubWorkerEmulationForChrome,
+			AsyncProxyFactory,
             AsyncProxySlaveSingleton,
             AsyncProxyMaster,
             ScriptsToImportPool,
@@ -26,6 +27,8 @@ function ExportAsyncProxySymbolsClosure() {
         AsyncProxySlaveSingleton['sendUserDataToMaster'] = AsyncProxySlaveSingleton.sendUserDataToMaster;
         AsyncProxySlaveSingleton['wrapPromiseFromSlaveSide'] = AsyncProxySlaveSingleton.wrapPromiseFromSlaveSide;
         AsyncProxySlaveSingleton['wrapCallbackFromSlaveSide'] = AsyncProxySlaveSingleton.wrapCallbackFromSlaveSide;
+		
+		AsyncProxyFactory['create'] = AsyncProxyFactory.create;
 
         AsyncProxyMaster.prototype['setUserDataHandler'] = AsyncProxyMaster.prototype.setUserDataHandler;
         AsyncProxyMaster.prototype['terminate'] = AsyncProxyMaster.prototype.terminate;
@@ -67,10 +70,11 @@ function ExportAsyncProxySymbolsClosure() {
     
     asyncProxyScriptBlob.addMember(ExportAsyncProxySymbolsClosure, 'ExportAsyncProxySymbols');
     asyncProxyScriptBlob.addStatement('ExportAsyncProxySymbols(' +
-        'SubWorkerEmulationForChrome, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool, ' +
+        'SubWorkerEmulationForChrome, AsyncProxyFactory, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool, ' +
         'DependencyWorkers, DependencyWorkersTaskHandle, WrapperInputRetreiverBase, PromiseTask, PromiseWrapperInputRetreiver, ' +
         'PromiseDependencyWorkers, SchedulerTask, SchedulerWrapperInputRetreiver, SchedulerDependencyWorkers);');
     
+    asyncProxyScriptBlob.addStatement("self['AsyncProxy']['AsyncProxyFactory'] = AsyncProxyFactory;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['AsyncProxySlaveSingleton'] = AsyncProxySlaveSingleton;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['AsyncProxyMaster'] = AsyncProxyMaster;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['ScriptsToImportPool'] = ScriptsToImportPool;");
@@ -87,9 +91,10 @@ function ExportAsyncProxySymbolsClosure() {
 }
 
 (ExportAsyncProxySymbolsClosure())(
-    SubWorkerEmulationForChrome, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool,
+    SubWorkerEmulationForChrome, AsyncProxyFactory, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool,
     DependencyWorkers, DependencyWorkersTaskHandle, WrapperInputRetreiverBase, PromiseTask, PromiseWrapperInputRetreiver,
     PromiseDependencyWorkers, SchedulerTask, SchedulerWrapperInputRetreiver, SchedulerDependencyWorkers);
+self['AsyncProxy']['AsyncProxyFactory'] = AsyncProxyFactory;
 self['AsyncProxy']['AsyncProxySlaveSingleton'] = AsyncProxySlaveSingleton;
 self['AsyncProxy']['AsyncProxyMaster'] = AsyncProxyMaster;
 self['AsyncProxy']['ScriptsToImportPool'] = ScriptsToImportPool;

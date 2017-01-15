@@ -59,7 +59,7 @@ function AsyncProxyMasterClosure() {
     AsyncProxyMaster.prototype.callFunction = function callFunction(functionToCall, args, options) {
         options = options || {};
         var isReturnPromise = !!options['isReturnPromise'];
-        var transferables = options['transferables'];
+        var transferablesArg = options['transferables'] || [];
         var pathsToTransferables =
             options['pathsToTransferablesInPromiseResult'];
         
@@ -78,6 +78,14 @@ function AsyncProxyMasterClosure() {
         
         var sendMessageFunction = options['isSendImmediately'] ?
             sendMessageToSlave: enqueueMessageToSlave;
+		
+		var transferables;
+		if (typeof transferablesArg === 'function') {
+			transferables = transferablesArg();
+		} else {
+			transferables = AsyncProxyMaster._extractTransferables(
+				transferablesArg, args);
+		}
         
         sendMessageFunction(this, transferables, /*isFunctionCall=*/true, {
             functionToCall: functionToCall,
@@ -137,6 +145,30 @@ function AsyncProxyMasterClosure() {
 
         masterEntryUrl = newUrl;
     };
+	
+	AsyncProxyMaster._extractTransferables = function extractTransferables(
+			pathsToTransferables, pathsBase) {
+		
+        if (pathsToTransferables === undefined) {
+            return undefined;
+        }
+        
+        var transferables = new Array(pathsToTransferables.length);
+        
+        for (var i = 0; i < pathsToTransferables.length; ++i) {
+            var path = pathsToTransferables[i];
+            var transferable = pathsBase;
+            
+            for (var j = 0; j < path.length; ++j) {
+                var member = path[j];
+                transferable = transferable[member];
+            }
+            
+            transferables[i] = transferable;
+        }
+        
+        return transferables;
+    }
     
     // Private functions
     

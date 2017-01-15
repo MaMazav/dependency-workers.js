@@ -36,8 +36,9 @@ function AsyncProxySlaveClosure() {
             callId, promise, pathsToTransferables) {
         
         var promiseThen = promise.then(function sendPromiseToMaster(result) {
-            var transferables = extractTransferables(
-                pathsToTransferables, result);
+            var transferables =
+				self['AsyncProxy']['AsyncProxyMaster']._extractTransferables(
+					pathsToTransferables, result);
             
             self.postMessage(
                 {
@@ -82,8 +83,9 @@ function AsyncProxySlaveClosure() {
 				}
             }
             
-            var transferables = extractTransferables(
-                callbackHandle.pathsToTransferables, argumentsAsArray);
+            var transferables =
+				self['AsyncProxy']['AsyncProxyMaster']._extractTransferables(
+					callbackHandle.pathsToTransferables, argumentsAsArray);
             
             self.postMessage({
                     type: 'callback',
@@ -106,28 +108,6 @@ function AsyncProxySlaveClosure() {
         
         return scriptName;
     };
-    
-    function extractTransferables(pathsToTransferables, pathsBase) {
-        if (pathsToTransferables === undefined) {
-            return undefined;
-        }
-        
-        var transferables = new Array(pathsToTransferables.length);
-        
-        for (var i = 0; i < pathsToTransferables.length; ++i) {
-            var path = pathsToTransferables[i];
-            var transferable = pathsBase;
-            
-            for (var j = 0; j < path.length; ++j) {
-                var member = path[j];
-                transferable = transferable[member];
-            }
-            
-            transferables[i] = transferable;
-        }
-        
-        return transferables;
-    }
     
     function onMessage(event) {
         var functionNameToCall = event.data.functionToCall;
