@@ -167,7 +167,7 @@ function AsyncProxySlaveClosure() {
         }
         
         if (!functionToCall) {
-            throw 'AsyncProxy error: could not find function ' + functionToCall;
+            throw 'AsyncProxy error: could not find function ' + functionNameToCall;
         }
         
         var promise = functionToCall.apply(slaveSideMainInstance, args);

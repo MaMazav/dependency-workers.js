@@ -19,7 +19,7 @@ function AsyncProxyFactoryClosure() {
 		
 		ProxyClass.prototype['_getWorkerHelper'] = function getWorkerHelper() {
 			if (!this.__workerHelper) {
-				this.__workerHelper = new AsyncProxyMaster(
+				this.__workerHelper = new self['AsyncProxy']['AsyncProxyMaster'](
 					scriptsToImport, ctorName, this.__workerHelperCtorArgs || []);
 			}
 			
@@ -33,22 +33,32 @@ function AsyncProxyFactoryClosure() {
 		return ProxyClass;
 	};
 	
-	function generateMethod(ProxyClass, methodName, methodArgs) {
-		if (typeof methodArgs === 'function') {
-			ProxyClass.prototype[methodName] = methodArgs;
+	function generateMethod(ProxyClass, methodName, methodArgsDescription) {
+		if (typeof methodArgsDescription === 'function') {
+			ProxyClass.prototype[methodName] = methodArgsDescription;
 			return;
 		}
 		
-		var methodOptions = methodArgs[0] || {};
+		var methodOptions = methodArgsDescription[0] || {};
 		ProxyClass.prototype[methodName] = function generatedFunction() {
+			var workerHelper = this['_getWorkerHelper']();
 			var argsToSend = [];
 			for (var i = 0; i < arguments.length; ++i) {
-				if (!methodArgs[i + 1]) {
-					argsToSend[i] = arguments[i];
+				var argDescription = methodArgsDescription[i + 1];
+				var argValue = arguments[i];
+				
+				if (argDescription === 'callback') {
+					argsToSend[i] = workerHelper.wrapCallback(argValue);
+				} else if (!argDescription) {
+					argsToSend[i] = argValue;
+				} else {
+					throw 'AsyncProxyFactory error: Unrecognized argument ' +
+						'description ' + argDescription + ' in argument ' +
+						(i + 1) + ' of method ' + methodName;
 				}
 			}
-			var argsToSend = convertArgs(arguments);
-			return this['_getWorkerHelper']().callFunction(methodName, argsToSend);
+			return workerHelper.callFunction(
+				methodName, argsToSend, methodArgsDescription[0]);
 		}
 	};
 	
