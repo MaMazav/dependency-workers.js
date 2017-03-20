@@ -6,7 +6,6 @@ function DependencyWorkersClosure() {
     function DependencyWorkers(workerInputRetreiver) {
         var that = this;
         that._workerInputRetreiver = workerInputRetreiver;
-        //that._internalContexts = new HashMap(/*hasher=*/workerInputRetreiver);
         that._internalContexts = new JsBuiltinHashMap();
         that._workerPoolByTaskType = [];
         that._taskOptionsByTaskType = [];
@@ -16,18 +15,14 @@ function DependencyWorkersClosure() {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'workerInputRetreiver.createTaskContext() method';
         }
-        if (!workerInputRetreiver['getTaskOptions']) {
+        if (!workerInputRetreiver['getTaskTypeOptions']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
-                'workerInputRetreiver.getTaskOptions() method';
+                'workerInputRetreiver.getTaskTypeOptions() method';
         }
-        //if (!workerInputRetreiver['getHashCode']) {
-        //    throw 'AsyncProxy.DependencyWorkers: No ' +
-        //        'workerInputRetreiver.getHashCode() method';
-        //}
-        //if (!workerInputRetreiver['isEqual']) {
-        //    throw 'AsyncProxy.DependencyWorkers: No ' +
-        //        'workerInputRetreiver.isEqual() method';
-        //}
+        if (!workerInputRetreiver['getKeyAsString']) {
+            throw 'AsyncProxy.DependencyWorkers: No ' +
+                'workerInputRetreiver.getKeyAsString() method';
+        }
     }
     
     DependencyWorkers.prototype.startTask = function startTask(
@@ -35,7 +30,8 @@ function DependencyWorkersClosure() {
         
         var dependencyWorkers = this;
         
-        var addResult = this._internalContexts.tryAdd(taskKey, function() {
+        var strKey = this._workerInputRetreiver['getKeyAsString'](taskKey);
+        var addResult = this._internalContexts.tryAdd(strKey, function() {
             // internalContext
             return new DependencyWorkersInternalContext();
         });
@@ -48,6 +44,7 @@ function DependencyWorkersClosure() {
             internalContext.initialize(
                 taskKey,
                 this,
+                this._workerInputRetreiver,
                 this._internalContexts,
                 addResult.iterator,
                 this._workerInputRetreiver);
@@ -88,7 +85,8 @@ function DependencyWorkersClosure() {
     };
     
     DependencyWorkers.prototype.getTaskContext = function getTaskContext(taskKey) {
-        var context = this._internalContexts.getFromKey(taskKey);
+        strKey = this._workerInputRetreiver['getKeyAsString'](taskKey);
+        var context = this._internalContexts.getFromKey(strKey);
         if (context === null) {
             return null;
         }
@@ -148,6 +146,7 @@ function DependencyWorkersClosure() {
         
         if (isDisableWorker) {
             internalContext.newData(dataToProcess);
+            internalContext.statusUpdate();
             return;
         }
         
@@ -160,7 +159,7 @@ function DependencyWorkersClosure() {
         if (workerPool.length > 0) {
             worker = workerPool.pop();
         } else {
-            var workerArgs = that._workerInputRetreiver['getTaskOptions'](
+            var workerArgs = that._workerInputRetreiver['getTaskTypeOptions'](
                 internalContext.taskType);
             worker = new AsyncProxyMaster(
                 workerArgs['scriptsToImport'],

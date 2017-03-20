@@ -4,17 +4,13 @@ function WrapperInputRetreiverBaseClosure() {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
     function WrapperInputRetreiverBase(inputRetreiver) {
-        //if (!inputRetreiver['getHashCode']) {
-        //    throw 'AsyncProxy.DependencyWorkers: No ' +
-        //        'inputRetreiver.getHashCode() method';
-        //}
-        //if (!inputRetreiver['isEqual']) {
-        //    throw 'AsyncProxy.DependencyWorkers: No ' +
-        //        'inputRetreiver.isEqual() method';
-        //}
-        if (!inputRetreiver['getTaskOptions']) {
+        if (!inputRetreiver['getKeyAsString']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
-                'inputRetreiver.getTaskOptions() method';
+                'inputRetreiver.getKeyAsString() method';
+        }
+        if (!inputRetreiver['getTaskTypeOptions']) {
+            throw 'AsyncProxy.DependencyWorkers: No ' +
+                'inputRetreiver.getTaskTypeOptions() method';
         }
 
         var that = this;
@@ -27,17 +23,13 @@ function WrapperInputRetreiverBaseClosure() {
         throw 'AsyncProxy.WrapperInputRetreiverBase internal error: Not implemented createTaskContext()';
     };
     
-    //WrapperInputRetreiverBase.prototype.getHashCode = function(key) {
-    //    return this._inputRetreiver['getHashCode'](key);
-    //};
-    //
-    //WrapperInputRetreiverBase.prototype.isEqual = function(key1, key2) {
-    //    return this._inputRetreiver['isEqual'](key1, key2);
-    //};
+    WrapperInputRetreiverBase.prototype.getKeyAsString = function(key) {
+        return this._inputRetreiver['getKeyAsString'](key);
+    };
     
     
-    WrapperInputRetreiverBase.prototype.getTaskOptions = function(taskType) {
-        return this._inputRetreiver['getTaskOptions'](taskType);
+    WrapperInputRetreiverBase.prototype.getTaskTypeOptions = function(taskType) {
+        return this._inputRetreiver['getTaskTypeOptions'](taskType);
     };
     
     asyncProxyScriptBlob.addMember(

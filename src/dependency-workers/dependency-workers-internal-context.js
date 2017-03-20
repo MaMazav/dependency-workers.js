@@ -26,16 +26,18 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this.taskType = null;
         this._dependsTasksTerminatedCount = 0;
         this._parentDependencyWorkers = null;
+        this._workerInputRetreiver = null;
         this._parentList = null;
         this._parentIterator = null;
         this._dependsTaskHandles = null;
 	}
     
     DependencyWorkersInternalContext.prototype.initialize = function(
-            taskKey, dependencyWorkers, list, iterator /*, hasher*/) {
+            taskKey, dependencyWorkers, inputRetreiver, list, iterator /*, hasher*/) {
                 
         this.taskKey = taskKey;
         this._parentDependencyWorkers = dependencyWorkers;
+        this._workerInputRetreiver = inputRetreiver;
         this._parentList = list;
         this._parentIterator = iterator;
         //this._dependsTaskHandles = new HashMap(hasher);
@@ -43,6 +45,9 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
     };
     
     DependencyWorkersInternalContext.prototype.ended = function() {
+        this._parentList.remove(this._parentIterator);
+        this._parentIterator = null;
+
         var iterator = this._dependsTaskHandles.getFirstIterator();
         while (iterator != null) {
             var handle = this._dependsTaskHandles.getFromIterator(iterator).taskHandle;
@@ -62,9 +67,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         }
         this.taskHandles.clear();
         
-        this._dependsTaskHandles = [];
-        this._parentList.remove(this._parentIterator);
-        this._parentIterator = null;
+        this._dependsTaskHandles.clear();
     };
 	
     DependencyWorkersInternalContext.prototype.setPriorityAndNotify = function(
@@ -149,7 +152,8 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
     DependencyWorkersInternalContext.prototype._registerTaskDependency = function(
             taskKey) {
         
-        var addResult = this._dependsTaskHandles.tryAdd(taskKey, function() {
+        var strKey = this._workerInputRetreiver['getKeyAsString'](taskKey);
+        var addResult = this._dependsTaskHandles.tryAdd(strKey, function() {
             return { taskHandle: null };
         });
         

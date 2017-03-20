@@ -8,7 +8,7 @@ function SchedulerTaskClosure() {
         that._scheduler = scheduler;
         that._taskKey = taskKey;
         that._taskContext = null;
-        that._resource = null;
+        that._jobCallbacks = null;
         that._callbacks = callbacks;
         that._onScheduledBound = that._onScheduled.bind(that);
         that._callbacksForWrappedTask = {
@@ -109,7 +109,7 @@ function SchedulerTaskClosure() {
     };
     
     SchedulerTask.prototype._onScheduled = function dataReadyForWorker(
-            resource, jobContext) {
+            resource, jobContext, jobCallbacks) {
                 
         if (jobContext !== this._taskContext) {
             throw 'AsyncProxy.DependencyWorkers: Unexpected context';
@@ -117,7 +117,7 @@ function SchedulerTaskClosure() {
         
         if (this._cancelPendingDataToProcess) {
             this._cancelPendingDataToProcess = false;
-            this._scheduler['jobDone'](resource, jobContext);
+            this._jobCallbacks['jobDone']();
         }
         if (!this._hasPendingDataToProcess) {
             throw 'AsyncProxy.DependencyWorkers: !enqueuedProcessJob';
@@ -125,7 +125,7 @@ function SchedulerTaskClosure() {
         
         this._isWorkerActive = true;
         this._hasPendingDataToProcess = false;
-        this._resource = resource;
+        this._jobCallbacks = jobCallbacks;
         this._callbacks['onDataReadyToProcess'](this._pendingDataToProcess);
         this._pendingDataToProcess = null;
     };
@@ -140,15 +140,15 @@ function SchedulerTaskClosure() {
         }
         
         this._isWorkerActive = false;
-        var resource = this._resource;
-        this._resource = null;
-
+        var jobCallbacks = this._jobCallbacks;
+        this._jobCallbacks = null;
+        
         if (this._hasPendingDataToProcess) {
             this._scheduler['enqueueJob'](
                 this._onScheduledBound, this._taskContext);
         }
 
-        this._scheduler['jobDone'](resource, this._taskContext);
+        jobCallbacks['jobDone']();
     };
     
     SchedulerTask.prototype._onTerminated = function onTerminated() {

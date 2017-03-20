@@ -10,13 +10,17 @@ function PromiseTaskClosure() {
     
     function PromiseTask(
             taskKey,
-            dependsOnTasks,
+            promiseTaskProperties,
             workerInputRetreiver,
             callbacks) {
         
         var that = this;
+        promiseTaskProperties = promiseTaskProperties || {};
+        
         that._taskKey = taskKey;
-        that._dependsOnTasks = dependsOnTasks;
+        that._dependsOnTasks = promiseTaskProperties['dependsOnTasks'] || [];
+        that._taskType = promiseTaskProperties['taskType'];
+        that._isDisableWorker = promiseTaskProperties['isDisableWorker'];
         that._workerInputRetreiver = workerInputRetreiver;
         that._callbacks = callbacks;
         
@@ -28,8 +32,8 @@ function PromiseTaskClosure() {
         
         that._checkIfDependsTaskDone();
         
-        for (var i = 0; i < dependsOnTasks.length; ++i) {
-            callbacks['registerTaskDependency'](dependsOnTasks[i]);
+        for (var i = 0; i < that._dependsOnTasks.length; ++i) {
+            callbacks['registerTaskDependency'](that._dependsOnTasks[i]);
         }
     }
     
@@ -50,15 +54,17 @@ function PromiseTaskClosure() {
             //this._resultIndexByTaskKey = new HashMap(this._workerInputRetreiver);
             this._resultIndexByTaskKey = new JsBuiltinHashMap();
             for (var i = 0; i < this._dependsOnTasks.length; ++i) {
-                this._resultIndexByTaskKey.tryAdd(
-                    this._dependsOnTasks[i],
-                    function() {
-                        return i;
-                    });
+                var strKey = this._workerInputRetreiver['getKeyAsString'](
+                    this._dependsOnTasks[i]);
+                    
+                this._resultIndexByTaskKey.tryAdd(strKey, function() {
+                    return i;
+                });
             }
         }
         
-        var index = this._resultIndexByTaskKey.getFromKey(key);
+        var strKey = this._workerInputRetreiver['getKeyAsString'](key);
+        var index = this._resultIndexByTaskKey.getFromKey(strKey);
         if (index === null) {
             throw 'AsyncProxy.PromiseTask: Task is not depends on key';
         }
@@ -81,7 +87,7 @@ function PromiseTaskClosure() {
     };
     
     PromiseTask.prototype.getTaskType = function() {
-        return 0;
+        return this._taskType;
     };
     
     PromiseTask.prototype._checkIfDependsTaskDone = function(status) {
@@ -99,7 +105,7 @@ function PromiseTaskClosure() {
             .then(function(result) {
                 if (that._waitingFor !== TERMINATED) {
                     that._waitingFor = WAITING_FOR_WORKER;
-                    that._callbacks['onDataReadyToProcess'](result);
+                    that._callbacks['onDataReadyToProcess'](result, that._isDisableWorker);
                 }
             }).catch(function(reason) {
                 that._terminate(reason);

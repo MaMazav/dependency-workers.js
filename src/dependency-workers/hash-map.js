@@ -4,11 +4,15 @@ var HashMap = (function HashMapClosure() {
 
 function HashMap(hasher) {
     var that = this;
-    that._listByKey = [];
-    that._listOfLists = new LinkedList();
     that._hasher = hasher;
-    that._count = 0;
+	that.clear();
 }
+
+HashMap.prototype.clear = function clear() {
+    this._listByKey = [];
+    this._listOfLists = new LinkedList();
+    this._count = 0;
+};
 
 HashMap.prototype.getFromKey = function getFromKey(key) {
     var hashCode = this._hasher['getHashCode'](key);

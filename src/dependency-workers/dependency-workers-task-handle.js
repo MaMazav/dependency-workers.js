@@ -42,7 +42,9 @@ var DependencyWorkersTaskHandle = (function DependencyWorkersTaskHandleClosure()
         
         if (this._internalContext.taskHandles.getCount() == 0) {
             if (!this._internalContext.isTerminated) {
-                this._internalContext.ended();
+                // Should be called from statusUpdate when worker shut down
+				//this._internalContext.ended();
+				
                 this._internalContext.statusUpdate();
             }
         } else if (this._localPriority === this._internalContext.priority) {

@@ -49,9 +49,8 @@ function ExportAsyncProxySymbolsClosure() {
         DependencyWorkersTaskHandle.prototype['setPriority'] = DependencyWorkersTaskHandle.prototype.setPriority;
         DependencyWorkersTaskHandle.prototype['unregister'] = DependencyWorkersTaskHandle.prototype.unregister;
         
-        //WrapperInputRetreiverBase.prototype['getHashCode'] = WrapperInputRetreiverBase.prototype.getHashCode;
-        //WrapperInputRetreiverBase.prototype['isEqual'] = WrapperInputRetreiverBase.prototype.isEqual;
-        WrapperInputRetreiverBase.prototype['getTaskOptions'] = WrapperInputRetreiverBase.prototype.getTaskOptions;
+        WrapperInputRetreiverBase.prototype['getTaskTypeOptions'] = WrapperInputRetreiverBase.prototype.getTaskTypeOptions;
+        WrapperInputRetreiverBase.prototype['getKeyAsString'] = WrapperInputRetreiverBase.prototype.getKeyAsString;
 
         PromiseTask.prototype['onDependencyTaskResult'] = PromiseTask.prototype.onDependencyTaskResult;
         PromiseTask.prototype['statusUpdated'] = PromiseTask.prototype.statusUpdated;

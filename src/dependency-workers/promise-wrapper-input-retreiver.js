@@ -9,9 +9,9 @@ function PromiseWrapperInputRetreiverClosure(WrapperInputRetreiverBase) {
         var that = this;
         that._promiseInputRetreiver = promiseInputRetreiver;
         
-        if (!promiseInputRetreiver['getDependsOnTasks']) {
+        if (!promiseInputRetreiver['getPromiseTaskProperties']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
-                'promiseInputRetreiver.getDependsOnTasks() method';
+                'promiseInputRetreiver.getPromiseTaskProperties() method';
         }
         if (!promiseInputRetreiver['preWorkerProcess']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
@@ -24,11 +24,11 @@ function PromiseWrapperInputRetreiverClosure(WrapperInputRetreiverBase) {
     PromiseWrapperInputRetreiver.prototype.createTaskContext = function(
             taskKey, callbacks) {
                 
-        var dependsOnTasks = this._promiseInputRetreiver['getDependsOnTasks'](
+        var taskProperties = this._promiseInputRetreiver['getPromiseTaskProperties'](
             taskKey);
             
         return new PromiseTask(
-            taskKey, dependsOnTasks, this._promiseInputRetreiver, callbacks);
+            taskKey, taskProperties, this._promiseInputRetreiver, callbacks);
     };
     
     asyncProxyScriptBlob.addMember(
