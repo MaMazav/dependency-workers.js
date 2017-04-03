@@ -9,15 +9,10 @@ function DependencyWorkersClosure() {
         that._internalContexts = new JsBuiltinHashMap();
         that._workerPoolByTaskType = [];
         that._taskOptionsByTaskType = [];
-        that._getTaskContextBound = that.getTaskContext.bind(this);
         
-        if (!workerInputRetreiver['createTaskContext']) {
+        if (!workerInputRetreiver['getWorkerTypeOptions']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
-                'workerInputRetreiver.createTaskContext() method';
-        }
-        if (!workerInputRetreiver['getTaskTypeOptions']) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
-                'workerInputRetreiver.getTaskTypeOptions() method';
+                'workerInputRetreiver.getWorkerTypeOptions() method';
         }
         if (!workerInputRetreiver['getKeyAsString']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
@@ -32,7 +27,6 @@ function DependencyWorkersClosure() {
         
         var strKey = this._workerInputRetreiver['getKeyAsString'](taskKey);
         var addResult = this._internalContexts.tryAdd(strKey, function() {
-            // internalContext
             return new DependencyWorkersInternalContext();
         });
         
@@ -48,9 +42,12 @@ function DependencyWorkersClosure() {
                 this._internalContexts,
                 addResult.iterator,
                 this._workerInputRetreiver);
-            this._startNewTask(internalContext);
+				
+            this._workerInputRetreiver['taskStarted'](
+				internalContext.taskKey, internalContext.taskApi);
         }
         
+
         return taskHandle;
     };
     
@@ -84,84 +81,31 @@ function DependencyWorkersClosure() {
         });
     };
     
-    DependencyWorkers.prototype.getTaskContext = function getTaskContext(taskKey) {
-        strKey = this._workerInputRetreiver['getKeyAsString'](taskKey);
-        var context = this._internalContexts.getFromKey(strKey);
-        if (context === null) {
-            return null;
-        }
-        
-        return context.taskContext;
-    };
-    
-    DependencyWorkers.prototype._startNewTask = function startNewTask(
-        internalContext) {
-        
-        taskContext = this._workerInputRetreiver['createTaskContext'](
-            internalContext.taskKey, {
-                'getTaskContext': this._getTaskContextBound,
-                'onDataReadyToProcess': onDataReadyToProcess,
-                'onTerminated': internalContext.onTerminatedBound,
-                'registerTaskDependency': internalContext.registerTaskDependencyBound
-            }
-        );
-        internalContext.taskContext = taskContext;
-        
-        if (!taskContext['getTaskType']) {
-            throw 'AsyncProxy.DependencyWorkers: missing ' +
-                'taskContext.getTaskType()';
-        }
-        if (!taskContext['statusUpdated']) {
-            throw 'AsyncProxy.DependencyWorkers: missing ' +
-                'taskContext.statusUpdated()';
-        }
-        if (!taskContext['onDependencyTaskResult']) {
-            throw 'AsyncProxy.DependencyWorkers: missing ' +
-                'taskContext.onDependencyTaskResult()';
-        }
-        internalContext.taskType = internalContext.taskContext['getTaskType']();
-        
-        var that = this;
-        
-        function onDataReadyToProcess(newDataToProcess, isDisableWorker) {
-            if (internalContext.isTerminated) {
-                throw 'AsyncProxy.DependencyWorkers: already terminated';
-            } else if (internalContext.waitingForWorkerResult) {
-                internalContext.pendingDataForWorker = newDataToProcess;
-                internalContext.isPendingDataForWorker = true;
-                internalContext.pendingDataIsDisableWorker = isDisableWorker;
-            } else {
-                that._startWorker(
-                    internalContext,
-                    newDataToProcess,
-                    isDisableWorker);
-            }
-        }
-    };
-    
-    DependencyWorkers.prototype._startWorker = function startWorker(
-        internalContext, dataToProcess, isDisableWorker) {
+    DependencyWorkers.prototype._dataReady = function dataReady(
+        internalContext, dataToProcess, workerType) {
             
-        var that = this;
-        
-        if (isDisableWorker) {
-            internalContext.newData(dataToProcess);
-            internalContext.statusUpdate();
-            return;
-        }
+		var that = this;
         
         var worker;
-        var workerPool = that._workerPoolByTaskType[internalContext.taskType];
+        var workerPool = that._workerPoolByTaskType[workerType];
         if (!workerPool) {
             workerPool = [];
-            that._workerPoolByTaskType[internalContext.taskType] = workerPool;
+            that._workerPoolByTaskType[workerType] = workerPool;
         }
         if (workerPool.length > 0) {
             worker = workerPool.pop();
         } else {
-            var workerArgs = that._workerInputRetreiver['getTaskTypeOptions'](
-                internalContext.taskType);
-            worker = new AsyncProxyMaster(
+            var workerArgs = that._workerInputRetreiver['getWorkerTypeOptions'](
+                workerType);
+
+			if (!workerArgs) {
+				internalContext.newData(dataToProcess);
+				internalContext.statusUpdate();
+				return;
+
+			}
+            
+			worker = new AsyncProxyMaster(
                 workerArgs['scriptsToImport'],
                 workerArgs['ctorName'],
                 workerArgs['ctorArgs']);
@@ -185,24 +129,29 @@ function DependencyWorkersClosure() {
             }).then(function(result) {
                 workerPool.push(worker);
                 
-                if (!internalContext.isPendingDataForWorker) {
+                if (!that._checkIfPendingData(internalContext)) {
                     internalContext.waitingForWorkerResult = false;
                     internalContext.statusUpdate();
-                    return;
                 }
-                
-                var dataToProcess = internalContext.pendingDataForWorker;
-                internalContext.isPendingDataForWorker = false;
-                internalContext.pendingDataForWorker = null;
-                
-                that._startWorker(
-                    internalContext,
-                    dataToProcess,
-                    internalContext.pendingDataIsDisableWorker);
-                
-                return result;
             });
     };
+	
+	DependencyWorkers.prototype._checkIfPendingData = function checkIfPendingData(internalContext) {
+		if (!internalContext.isPendingDataForWorker) {
+			return false;
+		}
+		
+		var dataToProcess = internalContext.pendingDataForWorker;
+		internalContext.isPendingDataForWorker = false;
+		internalContext.pendingDataForWorker = null;
+		
+		this._dataReady(
+			internalContext,
+			dataToProcess,
+			internalContext.pendingWorkerType);
+		
+		return true;
+	};
     
     asyncProxyScriptBlob.addMember(DependencyWorkersClosure, 'DependencyWorkers');
     

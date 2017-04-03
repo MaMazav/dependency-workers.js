@@ -8,19 +8,19 @@ function SchedulerWrapperInputRetreiverClosure(WrapperInputRetreiverBase) {
         var that = this;
         that._scheduler = scheduler;
 
-        if (!inputRetreiver['createTaskContext']) {
+        if (!inputRetreiver['taskStarted']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
-                'inputRetreiver.createTaskContext() method';
+                'inputRetreiver.taskStarted() method';
         }
     }
     
     SchedulerWrapperInputRetreiver.prototype = Object.create(WrapperInputRetreiverBase.prototype);
     
-    SchedulerWrapperInputRetreiver.prototype.createTaskContext =
-            function createTaskContext(taskKey, callbacks) {
+    SchedulerWrapperInputRetreiver.prototype.taskStarted =
+            function taskStarted(taskKey, task) {
         
         var wrapperTask = new SchedulerTask(this._scheduler, taskKey, callbacks);
-        var wrappedTask = this._inputRetreiver['createTaskContext'](
+        var wrappedTask = this._inputRetreiver['taskStarted'](
             taskKey, wrapperTask.getCallbacksForWrappedTask());
             
         wrapperTask.setWrappedContext(wrappedTask);

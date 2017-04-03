@@ -9,10 +9,8 @@ function ExportAsyncProxySymbolsClosure() {
             ScriptsToImportPool,
             DependencyWorkers,
             DependencyWorkersTaskHandle,
+			DependencyWorkersTask,
             WrapperInputRetreiverBase,
-            PromiseTask,
-            PromiseWrapperInputRetreiver,
-            PromiseDependencyWorkers,
             SchedulerTask,
             SchedulerWrapperInputRetreiver,
             SchedulerDependencyWorkers) {
@@ -48,30 +46,25 @@ function ExportAsyncProxySymbolsClosure() {
         DependencyWorkersTaskHandle.prototype['getLastData'] = DependencyWorkersTaskHandle.prototype.getLastData;
         DependencyWorkersTaskHandle.prototype['setPriority'] = DependencyWorkersTaskHandle.prototype.setPriority;
         DependencyWorkersTaskHandle.prototype['unregister'] = DependencyWorkersTaskHandle.prototype.unregister;
+		
+		DependencyWorkersTask.prototype['dataReady'] = DependencyWorkersTask.prototype.dataReady;
+		DependencyWorkersTask.prototype['terminate'] = DependencyWorkersTask.prototype.terminate;
+		DependencyWorkersTask.prototype['registerTaskDependency'] = DependencyWorkersTask.prototype.registerTaskDependency;
+		DependencyWorkersTask.prototype['on'] = DependencyWorkersTask.prototype.on;
+		//DependencyWorkersTask.prototype['dependTaskKeys'] = DependencyWorkersTask.prototype.dependTaskKeys;
+		//DependencyWorkersTask.prototype['dependTaskResults'] = DependencyWorkersTask.prototype.dependTaskResults;
         
         WrapperInputRetreiverBase.prototype['getTaskTypeOptions'] = WrapperInputRetreiverBase.prototype.getTaskTypeOptions;
         WrapperInputRetreiverBase.prototype['getKeyAsString'] = WrapperInputRetreiverBase.prototype.getKeyAsString;
 
-        PromiseTask.prototype['onDependencyTaskResult'] = PromiseTask.prototype.onDependencyTaskResult;
-        PromiseTask.prototype['statusUpdated'] = PromiseTask.prototype.statusUpdated;
-        PromiseTask.prototype['getTaskType'] = PromiseTask.prototype.getTaskType;
-        
-        PromiseWrapperInputRetreiver.prototype['createTaskContext'] = PromiseWrapperInputRetreiver.prototype.createTaskContext;
-        
-        SchedulerTask.prototype['onDependencyTaskResult'] = SchedulerTask.prototype.onDependencyTaskResult;
-        SchedulerTask.prototype['statusUpdated'] = SchedulerTask.prototype.statusUpdated;
-        SchedulerTask.prototype['getTaskType'] = SchedulerTask.prototype.getTaskType;
-        
-        SchedulerWrapperInputRetreiver.prototype['createTaskContext'] = SchedulerWrapperInputRetreiver.prototype.createTaskContext;
-
-        SchedulerDependencyWorkers.prototype['getTaskContext'] = SchedulerDependencyWorkers.prototype.getTaskContext;
+        SchedulerWrapperInputRetreiver.prototype['taskStarted'] = SchedulerWrapperInputRetreiver.prototype.taskStarted;
     }
     
     asyncProxyScriptBlob.addMember(ExportAsyncProxySymbolsClosure, 'ExportAsyncProxySymbols');
     asyncProxyScriptBlob.addStatement('ExportAsyncProxySymbols(' +
         'SubWorkerEmulationForChrome, AsyncProxyFactory, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool, ' +
-        'DependencyWorkers, DependencyWorkersTaskHandle, WrapperInputRetreiverBase, PromiseTask, PromiseWrapperInputRetreiver, ' +
-        'PromiseDependencyWorkers, SchedulerTask, SchedulerWrapperInputRetreiver, SchedulerDependencyWorkers);');
+        'DependencyWorkers, DependencyWorkersTaskHandle, DependencyWorkersTask, WrapperInputRetreiverBase, ' +
+        'SchedulerTask, SchedulerWrapperInputRetreiver, SchedulerDependencyWorkers);');
     
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['AsyncProxyFactory'] = AsyncProxyFactory;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['AsyncProxySlaveSingleton'] = AsyncProxySlaveSingleton;");
@@ -79,9 +72,6 @@ function ExportAsyncProxySymbolsClosure() {
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['ScriptsToImportPool'] = ScriptsToImportPool;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['DependencyWorkers'] = DependencyWorkers;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['WrapperInputRetreiverBase'] = WrapperInputRetreiverBase;");
-    asyncProxyScriptBlob.addStatement("self['AsyncProxy']['PromiseTask'] = PromiseTask;");
-    asyncProxyScriptBlob.addStatement("self['AsyncProxy']['PromiseWrapperInputRetreiver'] = PromiseWrapperInputRetreiver;");
-    asyncProxyScriptBlob.addStatement("self['AsyncProxy']['PromiseDependencyWorkers'] = PromiseDependencyWorkers;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['SchedulerTask'] = SchedulerTask;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['SchedulerWrapperInputRetreiver'] = SchedulerWrapperInputRetreiver;");
     asyncProxyScriptBlob.addStatement("self['AsyncProxy']['SchedulerDependencyWorkers'] = SchedulerDependencyWorkers;");
@@ -91,17 +81,14 @@ function ExportAsyncProxySymbolsClosure() {
 
 (ExportAsyncProxySymbolsClosure())(
     SubWorkerEmulationForChrome, AsyncProxyFactory, AsyncProxySlaveSingleton, AsyncProxyMaster, ScriptsToImportPool,
-    DependencyWorkers, DependencyWorkersTaskHandle, WrapperInputRetreiverBase, PromiseTask, PromiseWrapperInputRetreiver,
-    PromiseDependencyWorkers, SchedulerTask, SchedulerWrapperInputRetreiver, SchedulerDependencyWorkers);
+    DependencyWorkers, DependencyWorkersTaskHandle, DependencyWorkersTask, WrapperInputRetreiverBase,
+    SchedulerTask, SchedulerWrapperInputRetreiver, SchedulerDependencyWorkers);
 self['AsyncProxy']['AsyncProxyFactory'] = AsyncProxyFactory;
 self['AsyncProxy']['AsyncProxySlaveSingleton'] = AsyncProxySlaveSingleton;
 self['AsyncProxy']['AsyncProxyMaster'] = AsyncProxyMaster;
 self['AsyncProxy']['ScriptsToImportPool'] = ScriptsToImportPool;
 self['AsyncProxy']['DependencyWorkers'] = DependencyWorkers;
 self['AsyncProxy']['WrapperInputRetreiverBase'] = WrapperInputRetreiverBase;
-self['AsyncProxy']['PromiseTask'] = PromiseTask;
-self['AsyncProxy']['PromiseWrapperInputRetreiver'] = PromiseWrapperInputRetreiver;
-self['AsyncProxy']['PromiseDependencyWorkers'] = PromiseDependencyWorkers;
 self['AsyncProxy']['SchedulerTask'] = SchedulerTask;
 self['AsyncProxy']['SchedulerWrapperInputRetreiver'] = SchedulerWrapperInputRetreiver;
 self['AsyncProxy']['SchedulerDependencyWorkers'] = SchedulerDependencyWorkers;

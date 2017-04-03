@@ -8,7 +8,7 @@ function WrapperInputRetreiverBaseClosure() {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'inputRetreiver.getKeyAsString() method';
         }
-        if (!inputRetreiver['getTaskTypeOptions']) {
+        if (!inputRetreiver['getWorkerTypeOptions']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'inputRetreiver.getTaskTypeOptions() method';
         }
@@ -17,10 +17,10 @@ function WrapperInputRetreiverBaseClosure() {
         that._inputRetreiver = inputRetreiver;
     }
     
-    WrapperInputRetreiverBase.prototype.createTaskContext =
-            function createTaskContext(taskKey, callbacks) {
+    WrapperInputRetreiverBase.prototype.taskStarted =
+            function taskStarted(taskKey, task) {
         
-        throw 'AsyncProxy.WrapperInputRetreiverBase internal error: Not implemented createTaskContext()';
+        throw 'AsyncProxy.WrapperInputRetreiverBase internal error: Not implemented taskStarted()';
     };
     
     WrapperInputRetreiverBase.prototype.getKeyAsString = function(key) {
@@ -29,7 +29,7 @@ function WrapperInputRetreiverBaseClosure() {
     
     
     WrapperInputRetreiverBase.prototype.getTaskTypeOptions = function(taskType) {
-        return this._inputRetreiver['getTaskTypeOptions'](taskType);
+        return this._inputRetreiver['getWorkerTypeOptions'](taskType);
     };
     
     asyncProxyScriptBlob.addMember(
