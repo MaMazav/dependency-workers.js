@@ -28,7 +28,7 @@ function WrapperInputRetreiverBaseClosure() {
     };
     
     
-    WrapperInputRetreiverBase.prototype.getTaskTypeOptions = function(taskType) {
+    WrapperInputRetreiverBase.prototype.getWorkerTypeOptions = function(taskType) {
         return this._inputRetreiver['getWorkerTypeOptions'](taskType);
     };
     

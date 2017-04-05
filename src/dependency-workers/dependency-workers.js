@@ -82,10 +82,9 @@ function DependencyWorkersClosure() {
     };
     
     DependencyWorkers.prototype._dataReady = function dataReady(
-        internalContext, dataToProcess, workerType) {
-            
-		var that = this;
+			internalContext, dataToProcess, workerType) {
         
+		var that = this;
         var worker;
         var workerPool = that._workerPoolByTaskType[workerType];
         if (!workerPool) {
@@ -102,7 +101,6 @@ function DependencyWorkersClosure() {
 				internalContext.newData(dataToProcess);
 				internalContext.statusUpdate();
 				return;
-
 			}
             
 			worker = new AsyncProxyMaster(

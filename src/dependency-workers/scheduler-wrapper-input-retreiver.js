@@ -7,6 +7,8 @@ function SchedulerWrapperInputRetreiverClosure(WrapperInputRetreiverBase) {
         WrapperInputRetreiverBase.call(this, inputRetreiver);
         var that = this;
         that._scheduler = scheduler;
+		that._inputRetreiver = inputRetreiver;
+		that._isDisableWorkerCache = {};
 
         if (!inputRetreiver['taskStarted']) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
@@ -19,12 +21,9 @@ function SchedulerWrapperInputRetreiverClosure(WrapperInputRetreiverBase) {
     SchedulerWrapperInputRetreiver.prototype.taskStarted =
             function taskStarted(taskKey, task) {
         
-        var wrapperTask = new SchedulerTask(this._scheduler, taskKey, callbacks);
-        var wrappedTask = this._inputRetreiver['taskStarted'](
-            taskKey, wrapperTask.getCallbacksForWrappedTask());
-            
-        wrapperTask.setWrappedContext(wrappedTask);
-        return wrapperTask;
+        var wrapperTask = new SchedulerTask(
+			this._scheduler, this._inputRetreiver, this._isDisableWorkerCache, taskKey, task);
+        return this._inputRetreiver['taskStarted'](taskKey, wrapperTask);
     };
     
     asyncProxyScriptBlob.addMember(

@@ -1,43 +1,31 @@
 'use strict';
 
 var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
-	function DependencyWorkersTask(internalContext, parentObj, onRegistered, onTerminated, dataReadyObj, dataReady) {
-		this._internalContext = internalContext;
-		this._onRegistered = onRegistered;
-		this._onTerminated = onTerminated;
-		this._dataReady = dataReady;
-		this._parentObj = parentObj;
-		this._dataReadyObj = dataReadyObj;
+	function DependencyWorkersTask(wrapped, registerWrappedEvents) {
+		this._wrapped = wrapped;
 		this._eventListeners = {
 			'dependencyTaskData': [],
 			'statusUpdated': [],
 			'allDependTasksTerminated': []
 		};
+		
+		if (registerWrappedEvents) {
+			for (var event in this._eventListeners) {
+				this._registerWrappedEvent(event);
+			}
+		}
 	}
 	
 	DependencyWorkersTask.prototype.dataReady = function dataReady(newDataToProcess, workerType) {
-		if (this._internalContext.isTerminated) {
-			throw 'AsyncProxy.DependencyWorkers: already terminated';
-		} else if (this._internalContext.waitingForWorkerResult) {
-			// Used in DependencyWorkers._startWorker() when previous worker has finished
-			this._internalContext.pendingDataForWorker = newDataToProcess;
-			this._internalContext.isPendingDataForWorker = true;
-			this._internalContext.pendingWorkerType = workerType;
-		} else {
-			this._dataReady.call(
-				this._dataReadyObj,
-				this._internalContext,
-				newDataToProcess,
-				workerType);
-		}
+		this._wrapped.dataReady(newDataToProcess, workerType);
 	};
 	
 	DependencyWorkersTask.prototype.terminate = function terminate() {
-		this._onTerminated.call(this._parentObj);
+		this._wrapped.terminate();
 	};
 	
 	DependencyWorkersTask.prototype.registerTaskDependency = function registerTaskDependency(taskKey) {
-		return this._internalContext.registerTaskDependency(taskKey);
+		return this._wrapped.registerTaskDependency(taskKey);
 	};
 	
 	DependencyWorkersTask.prototype.on = function on(event, listener) {
@@ -45,29 +33,39 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
 			throw 'AsyncProxy.DependencyWorkers: Task has no event ' + event;
 		}
 		this._eventListeners[event].push(listener);
-		
-		if (this._onRegistered) {
-			this._onRegistered.call(this._parentObj, event, listener);
-		}
 	};
 	
 	Object.defineProperty(DependencyWorkersTask.prototype, 'dependTaskKeys', {
 		get: function getDependTaskKeys() {
-			return this._internalContext.dependTaskKeys;
+			return this._wrapped.dependTaskKeys;
 		}
 	});
 	
 	Object.defineProperty(DependencyWorkersTask.prototype, 'dependTaskResults', {
 		get: function getDependTaskResults() {
-			return this._internalContext.dependTaskResults;
+			return this._wrapped.dependTaskResults;
 		}
 	});
 	
 	DependencyWorkersTask.prototype._onEvent = function onEvent(event, arg1, arg2) {
+		if (event == 'statusUpdated') {
+			arg1 = this._modifyStatus(arg1);
+		}
 		var listeners = this._eventListeners[event];
 		for (var i = 0; i < listeners.length; ++i) {
 			listeners[i].call(this, arg1, arg2);
 		}
+	};
+	
+	DependencyWorkersTask.prototype._modifyStatus = function modifyStatus(status) {
+		return status;
+	};
+	
+	DependencyWorkersTask.prototype._registerWrappedEvent = function registerWrappedEvent(event) {
+		var that = this;
+		this._wrapped.on(event, function(arg1, arg2) {
+			that._onEvent(event, arg1, arg2);
+		});
 	};
 
     asyncProxyScriptBlob.addMember(DependencyWorkersTaskClosure, 'DependencyWorkersTask');

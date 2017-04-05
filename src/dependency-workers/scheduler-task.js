@@ -3,19 +3,15 @@
 function SchedulerTaskClosure() {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
-    function SchedulerTask(scheduler, taskKey, callbacks) {
+    function SchedulerTask(scheduler, inputRetreiver, isDisableWorkerCache, taskKey, wrappedTask) {
         var that = this;
+		DependencyWorkersTask.call(this, wrappedTask, /*registerWrappedEvents=*/true);
         that._scheduler = scheduler;
+		that._inputRetreiver = inputRetreiver;
+		that._isDisableWorkerCache = isDisableWorkerCache;
         that._taskKey = taskKey;
-        that._taskContext = null;
-        that._jobCallbacks = null;
-        that._callbacks = callbacks;
+		that._wrappedTask = wrappedTask;
         that._onScheduledBound = that._onScheduled.bind(that);
-        that._callbacksForWrappedTask = {
-            'onDataReadyToProcess': that._onDataReadyToProcess.bind(that),
-            'onTerminated': that._onTerminated.bind(that),
-            'registerTaskDependency': callbacks['registerTaskDependency']
-        };
         
         that._pendingDataToProcess = null;
         that._hasPendingDataToProcess = false;
@@ -23,75 +19,41 @@ function SchedulerTaskClosure() {
         that._isWorkerActive = false;
         that._lastStatus = { 'isWaitingForWorkerResult': false };
     }
+	
+	SchedulerTask.prototype = Object.create(DependencyWorkersTask.prototype);
     
-    SchedulerTask.prototype.setWrappedContext = function setWrappedContext(
-            taskContext) {
-                
-        if (!taskContext['statusUpdated']) {
-            throw 'AsyncProxy.DependencyWorkers: missing ' +
-                'taskContext.statusUpdated()';
-        }
-        if (!taskContext['onDependencyTaskResult']) {
-            throw 'AsyncProxy.DependencyWorkers: missing ' +
-                'taskContext.onDependencyTaskResult()';
-        }
-        if (!taskContext['getTaskType']) {
-            throw 'AsyncProxy.DependencyWorkers: missing ' +
-                'taskContext.getTaskType()';
-        }
-        
-        this._taskContext = taskContext;
-    };
-    
-    SchedulerTask.prototype.getWrappedContext = function getWrappedContext() {
-        return this._taskContext;
-    };
-    
-    SchedulerTask.prototype.getCallbacksForWrappedTask =
-            function getCallbacksForWrappedTask() {
-
-        return this._callbacksForWrappedTask;
-    };
-    
-    SchedulerTask.prototype.statusUpdated = function statusUpdated(status) {
+    SchedulerTask.prototype._modifyStatus = function modifyStatus(status) {
         this._lastStatus = JSON.parse(JSON.stringify(status));
         this._checkIfJobDone(status);
         this._lastStatus['isWaitingForWorkerResult'] =
             status['isWaitingForWorkerResult'] || this._hasPendingDataToProcess;
-        return this._taskContext['statusUpdated'](this._lastStatus);
-    };
-    
-    SchedulerTask.prototype.onDependencyTaskResult =
-            function onDependencyTaskResult(data, key) {
         
-        return this._taskContext['onDependencyTaskResult'](data, key);
+		return this._lastStatus;
     };
     
-    SchedulerTask.prototype.getTaskType = function getTaskType() {
-        return this._taskContext['getTaskType']();
-    };
-    
-    SchedulerTask.prototype._onDataReadyToProcess = function onDataReadyToProcess(
-            newDataToProcess, isDisableWorker) {
+    SchedulerTask.prototype.dataReady = function onDataReadyToProcess(
+            newDataToProcess, workerType) {
                 
         if (this._isTerminated) {
             throw 'AsyncProxy.DependencyWorkers: Data after termination';
         }
         
-        if (isDisableWorker) {
+        if (this._isDisableWorkerCache[workerType] === undefined) {
+			this._isDisableWorkerCache[workerType] = this._inputRetreiver.getWorkerTypeOptions(workerType) === null;
+		}
+		if (this._isDisableWorkerCache[workerType]) {
             this._pendingDataToProcess = null;
             this._cancelPendingDataToProcess =
                 this._hasPendingDataToProcess && !this._isWorkerActive;
             this._hasPendingDataToProcess = false;
-            this._callbacks['onDataReadyToProcess'](
-                newDataToProcess, isDisableWorker);
+            DependencyWorkersTask.prototype.dataReady.call(this, newDataToProcess, workerType);
             
             var isStatusChanged =
                 this._lastStatus['isWaitingForWorkerResult'] &&
                 !this._hasPendingDataToProcess;
             if (isStatusChanged) {
                 this._lastStatus['isWaitingForWorkerResult'] = false;
-                this._taskContext['statusUpdated'](this._lastStatus);
+                this._onEvent('statusUpdated', this._lastStatus);
             }
             
             return;
@@ -104,30 +66,47 @@ function SchedulerTaskClosure() {
 
         if (!hadPendingDataToProcess && !this._isWorkerActive) {
             this._scheduler['enqueueJob'](
-                this._onScheduledBound, this._taskContext);
+                this._onScheduledBound, this);
         }
+    };
+    
+    SchedulerTask.prototype.terminate = function terminate() {
+        if (this._isTerminated) {
+            throw 'AsyncProxy.DependencyWorkers: Double termination';
+        }
+        
+        this._isTerminated = true;
+        if (!this._hasPendingDataToProcess) {
+			DependencyWorkersTask.prototype.terminate.call(this);
+		}
     };
     
     SchedulerTask.prototype._onScheduled = function dataReadyForWorker(
             resource, jobContext, jobCallbacks) {
                 
-        if (jobContext !== this._taskContext) {
+        if (jobContext !== this) {
             throw 'AsyncProxy.DependencyWorkers: Unexpected context';
         }
         
         if (this._cancelPendingDataToProcess) {
             this._cancelPendingDataToProcess = false;
-            this._jobCallbacks['jobDone']();
-        }
-        if (!this._hasPendingDataToProcess) {
-            throw 'AsyncProxy.DependencyWorkers: !enqueuedProcessJob';
-        }
-        
-        this._isWorkerActive = true;
-        this._hasPendingDataToProcess = false;
-        this._jobCallbacks = jobCallbacks;
-        this._callbacks['onDataReadyToProcess'](this._pendingDataToProcess);
-        this._pendingDataToProcess = null;
+			jobCallbacks['jobDone']();
+        } else {
+			if (!this._hasPendingDataToProcess) {
+				throw 'AsyncProxy.DependencyWorkers: !enqueuedProcessJob';
+			}
+			
+			this._isWorkerActive = true;
+			this._hasPendingDataToProcess = false;
+			this._jobCallbacks = jobCallbacks;
+			var data = this._pendingDataToProcess;
+			this._pendingDataToProcess = null;
+			DependencyWorkersTask.prototype.dataReady.call(this, data);
+		}
+		
+		if (this._isTerminated) {
+			DependencyWorkersTask.prototype.terminate.call(this);
+		}
     };
     
     SchedulerTask.prototype._checkIfJobDone = function checkIfJobDone(status) {
@@ -140,28 +119,13 @@ function SchedulerTaskClosure() {
         }
         
         this._isWorkerActive = false;
-        var jobCallbacks = this._jobCallbacks;
-        this._jobCallbacks = null;
         
         if (this._hasPendingDataToProcess) {
             this._scheduler['enqueueJob'](
-                this._onScheduledBound, this._taskContext);
+                this._onScheduledBound, this);
         }
 
-        jobCallbacks['jobDone']();
-    };
-    
-    SchedulerTask.prototype._onTerminated = function onTerminated() {
-        if (this._isTerminated) {
-            throw 'AsyncProxy.DependencyWorkers: Double termination';
-        }
-        
-        this._isTerminated = true;
-        this._cancelPendingDataToProcess =
-            this._hasPendingDataToProcess && !this._isWorkerActive;
-        this._hasPendingDataToProcess = false;
-        
-        this._callbacks['onTerminated']();
+        this._jobCallbacks['jobDone']();
     };
     
     asyncProxyScriptBlob.addMember(
