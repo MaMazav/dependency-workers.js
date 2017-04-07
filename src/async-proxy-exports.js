@@ -51,10 +51,9 @@ function ExportAsyncProxySymbolsClosure() {
 		DependencyWorkersTask.prototype['terminate'] = DependencyWorkersTask.prototype.terminate;
 		DependencyWorkersTask.prototype['registerTaskDependency'] = DependencyWorkersTask.prototype.registerTaskDependency;
 		DependencyWorkersTask.prototype['on'] = DependencyWorkersTask.prototype.on;
-		//DependencyWorkersTask.prototype['dependTaskKeys'] = DependencyWorkersTask.prototype.dependTaskKeys;
-		//DependencyWorkersTask.prototype['dependTaskResults'] = DependencyWorkersTask.prototype.dependTaskResults;
         
-        WrapperInputRetreiverBase.prototype['getTaskTypeOptions'] = WrapperInputRetreiverBase.prototype.getTaskTypeOptions;
+        WrapperInputRetreiverBase.prototype['taskStarted'] = WrapperInputRetreiverBase.prototype.taskStarted;
+        WrapperInputRetreiverBase.prototype['getWorkerTypeOptions'] = WrapperInputRetreiverBase.prototype.getWorkerTypeOptions;
         WrapperInputRetreiverBase.prototype['getKeyAsString'] = WrapperInputRetreiverBase.prototype.getKeyAsString;
 
         SchedulerWrapperInputRetreiver.prototype['taskStarted'] = SchedulerWrapperInputRetreiver.prototype.taskStarted;

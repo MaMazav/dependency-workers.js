@@ -1,15 +1,14 @@
 'use strict';
 
-function SchedulerTaskClosure() {
+function SchedulerTaskClosure(DependencyWorkersTask) {
     var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
     
-    function SchedulerTask(scheduler, inputRetreiver, isDisableWorkerCache, taskKey, wrappedTask) {
+    function SchedulerTask(scheduler, inputRetreiver, isDisableWorkerCache, wrappedTask) {
         var that = this;
-		DependencyWorkersTask.call(this, wrappedTask, /*registerWrappedEvents=*/true);
+		DependencyWorkersTask.call(this, wrappedTask, wrappedTask.key, /*registerWrappedEvents=*/true);
         that._scheduler = scheduler;
 		that._inputRetreiver = inputRetreiver;
 		that._isDisableWorkerCache = isDisableWorkerCache;
-        that._taskKey = taskKey;
 		that._wrappedTask = wrappedTask;
         that._onScheduledBound = that._onScheduled.bind(that);
         
@@ -129,9 +128,9 @@ function SchedulerTaskClosure() {
     };
     
     asyncProxyScriptBlob.addMember(
-        SchedulerTaskClosure, 'SchedulerTask');
+        SchedulerTaskClosure, 'SchedulerTask', null, 'DependencyWorkersTask');
     
     return SchedulerTask;
 }
 
-var SchedulerTask = SchedulerTaskClosure();
+var SchedulerTask = SchedulerTaskClosure(DependencyWorkersTask);

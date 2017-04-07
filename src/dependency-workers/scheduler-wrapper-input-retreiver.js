@@ -19,11 +19,11 @@ function SchedulerWrapperInputRetreiverClosure(WrapperInputRetreiverBase) {
     SchedulerWrapperInputRetreiver.prototype = Object.create(WrapperInputRetreiverBase.prototype);
     
     SchedulerWrapperInputRetreiver.prototype.taskStarted =
-            function taskStarted(taskKey, task) {
+            function taskStarted(task) {
         
         var wrapperTask = new SchedulerTask(
-			this._scheduler, this._inputRetreiver, this._isDisableWorkerCache, taskKey, task);
-        return this._inputRetreiver['taskStarted'](taskKey, wrapperTask);
+			this._scheduler, this._inputRetreiver, this._isDisableWorkerCache, task);
+        return this._inputRetreiver['taskStarted'](wrapperTask);
     };
     
     asyncProxyScriptBlob.addMember(

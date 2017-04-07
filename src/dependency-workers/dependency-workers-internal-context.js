@@ -28,8 +28,8 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this._parentIterator = null;
         this._dependsTaskHandles = null;
 		
-		this.dependTaskKeys = [];
-		this.dependTaskResults = [];
+		this._dependTaskKeys = [];
+		this._dependTaskResults = [];
 		this._hasDependTaskData = [];
 	}
     
@@ -43,7 +43,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this._parentIterator = iterator;
         //this._dependsTaskHandles = new HashMap(hasher);
         this._dependsTaskHandles = new JsBuiltinHashMap();
-		this.taskApi = new DependencyWorkersTask(this);
+		this.taskApi = new DependencyWorkersTask(this, taskKey);
     };
     
     DependencyWorkersInternalContext.prototype.ended = function() {
@@ -170,14 +170,18 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 			this.ended();
 		}
     };
-    
-    DependencyWorkersInternalContext.prototype._dependsTaskTerminated = function dependsTaskTerminated() {
-        ++this._dependsTasksTerminatedCount;
-		if (this._dependsTasksTerminatedCount === this._dependsTaskHandles.getCount()) {
-			this.taskApi._onEvent('allDependTasksTerminated');
+	
+	Object.defineProperty(DependencyWorkersInternalContext.prototype, 'dependTaskKeys', {
+		get: function getDependTaskKeys() {
+			return this._dependTaskKeys;
 		}
-        this.statusUpdate();
-    };
+	});
+	
+	Object.defineProperty(DependencyWorkersInternalContext.prototype, 'dependTaskResults', {
+		get: function getDependTaskResults() {
+			return this._dependTaskResults;
+		}
+	});
 	
     DependencyWorkersInternalContext.prototype.registerTaskDependency = function(
             taskKey) {
@@ -194,9 +198,9 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         var that = this;
         var gotData = false;
         var isTerminated = false;
-		var index = this.dependTaskKeys.length;
+		var index = this._dependTaskKeys.length;
 		
-		this.dependTaskKeys[index] = taskKey;
+		this._dependTaskKeys[index] = taskKey;
         
         addResult.value.taskHandle = this._parentDependencyWorkers.startTask(
             taskKey, {
@@ -212,7 +216,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 		}
         
         function onDependencyTaskData(data) {
-			that.dependTaskResults[index] = data;
+			that._dependTaskResults[index] = data;
 			that._hasDependTaskData[index] = true;
 			that.taskApi._onEvent('dependencyTaskData', data, taskKey);
             gotData = true;
@@ -226,6 +230,14 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
             that._dependsTaskTerminated();
         }
     }
+    
+    DependencyWorkersInternalContext.prototype._dependsTaskTerminated = function dependsTaskTerminated() {
+        ++this._dependsTasksTerminatedCount;
+		if (this._dependsTasksTerminatedCount === this._dependsTaskHandles.getCount()) {
+			this.taskApi._onEvent('allDependTasksTerminated');
+		}
+        this.statusUpdate();
+    };
 	
     return DependencyWorkersInternalContext;
 })();

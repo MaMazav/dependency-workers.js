@@ -43,8 +43,7 @@ function DependencyWorkersClosure() {
                 addResult.iterator,
                 this._workerInputRetreiver);
 				
-            this._workerInputRetreiver['taskStarted'](
-				internalContext.taskKey, internalContext.taskApi);
+            this._workerInputRetreiver['taskStarted'](internalContext.taskApi);
         }
         
 

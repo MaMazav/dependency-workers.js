@@ -18,7 +18,7 @@ function WrapperInputRetreiverBaseClosure() {
     }
     
     WrapperInputRetreiverBase.prototype.taskStarted =
-            function taskStarted(taskKey, task) {
+            function taskStarted(task) {
         
         throw 'AsyncProxy.WrapperInputRetreiverBase internal error: Not implemented taskStarted()';
     };

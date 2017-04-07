@@ -1,8 +1,9 @@
 'use strict';
 
 var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
-	function DependencyWorkersTask(wrapped, registerWrappedEvents) {
+	function DependencyWorkersTask(wrapped, key, registerWrappedEvents) {
 		this._wrapped = wrapped;
+		this._key = key;
 		this._eventListeners = {
 			'dependencyTaskData': [],
 			'statusUpdated': [],
@@ -35,15 +36,21 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
 		this._eventListeners[event].push(listener);
 	};
 	
+	Object.defineProperty(DependencyWorkersTask.prototype, 'key', {
+		get: function getKey() {
+			return this._key;
+		}
+	});
+	
 	Object.defineProperty(DependencyWorkersTask.prototype, 'dependTaskKeys', {
 		get: function getDependTaskKeys() {
-			return this._wrapped.dependTaskKeys;
+			return this._wrapped['dependTaskKeys'];
 		}
 	});
 	
 	Object.defineProperty(DependencyWorkersTask.prototype, 'dependTaskResults', {
 		get: function getDependTaskResults() {
-			return this._wrapped.dependTaskResults;
+			return this._wrapped['dependTaskResults'];
 		}
 	});
 	
