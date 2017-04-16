@@ -1,4 +1,8 @@
-function SubWorkerEmulationForChromeClosure() {
+'use strict';
+
+/* global self: false */
+
+var SubWorkerEmulationForChrome = (function SubWorkerEmulationForChromeClosure() {
     var subWorkerId = 0;
     var subWorkerIdToSubWorker = null;
     
@@ -23,7 +27,7 @@ function SubWorkerEmulationForChromeClosure() {
         subWorkerIdToSubWorker_) {
         
         subWorkerIdToSubWorker = subWorkerIdToSubWorker_;
-    }
+    };
     
     SubWorkerEmulationForChrome.prototype.postMessage = function postMessage(
         data, transferables) {
@@ -46,9 +50,7 @@ function SubWorkerEmulationForChromeClosure() {
         transferables);
     };
     
-    self['asyncProxyScriptBlob'].addMember(SubWorkerEmulationForChromeClosure, 'SubWorkerEmulationForChrome');
-    
     return SubWorkerEmulationForChrome;
-}
+})();
 
-var SubWorkerEmulationForChrome = SubWorkerEmulationForChromeClosure();
+module.exports = SubWorkerEmulationForChrome;

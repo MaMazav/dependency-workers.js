@@ -1,5 +1,9 @@
 'use strict';
 
+var LinkedList = require('linked-list');
+var JsBuiltinHashMap = require('js-builtin-hash-map');
+var DependencyWorkersTask = require('dependency-workers-task');
+
 var DependencyWorkersInternalContext = (function DependencyWorkersInternalContextClosure() {
 	function DependencyWorkersInternalContext() {
         // This class is not exposed outside AsyncProxy, I allowed myself to
@@ -51,7 +55,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this._parentIterator = null;
 
         var iterator = this._dependsTaskHandles.getFirstIterator();
-        while (iterator != null) {
+        while (iterator !== null) {
             var handle = this._dependsTaskHandles.getFromIterator(iterator).taskHandle;
             iterator = this._dependsTaskHandles.getNextIterator(iterator);
             
@@ -62,12 +66,12 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 		var that = this;
 		setTimeout(function() {
 			iterator = that.taskHandles.getFirstIterator();
-			while (iterator != null) {
+			while (iterator !== null) {
 				var handle = that.taskHandles.getFromIterator(iterator);
 				iterator = that.taskHandles.getNextIterator(iterator);
 
-				if (handle._callbacks['onTerminated']) {
-					handle._callbacks['onTerminated']();
+				if (handle._callbacks.onTerminated) {
+					handle._callbacks.onTerminated();
 				}
 			}
 			
@@ -86,7 +90,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         this.statusUpdate();
 
         var iterator = this._dependsTaskHandles.getFirstIterator();
-        while (iterator != null) {
+        while (iterator !== null) {
             var handle = this._dependsTaskHandles.getFromIterator(iterator).taskHandle;
             iterator = this._dependsTaskHandles.getNextIterator(iterator);
             
@@ -116,7 +120,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         var iterator = handles.getFirstIterator();
         var isFirst = true;
         var newPriority = 0;
-        while (iterator != null) {
+        while (iterator !== null) {
             var handle = handles.getFromIterator(iterator);
             if (isFirst || handle._localPriority > newPriority) {
                 newPriority = handle._localPriority;
@@ -135,11 +139,11 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 		setTimeout(function() {
 			var handles = that.taskHandles;
 			var iterator = handles.getFirstIterator();
-			while (iterator != null) {
+			while (iterator !== null) {
 				var handle = handles.getFromIterator(iterator);
 				iterator = handles.getNextIterator(iterator);
 				
-				handle._callbacks['onData'](data, that.taskKey);
+				handle._callbacks.onData(data, that.taskKey);
 			}
 		});
     };
@@ -186,7 +190,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
     DependencyWorkersInternalContext.prototype.registerTaskDependency = function(
             taskKey) {
         
-        var strKey = this._workerInputRetreiver['getKeyAsString'](taskKey);
+        var strKey = this._workerInputRetreiver.getKeyAsString(taskKey);
         var addResult = this._dependsTaskHandles.tryAdd(strKey, function() {
             return { taskHandle: null };
         });
@@ -229,7 +233,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
             isTerminated = true;
             that._dependsTaskTerminated();
         }
-    }
+    };
     
     DependencyWorkersInternalContext.prototype._dependsTaskTerminated = function dependsTaskTerminated() {
         ++this._dependsTasksTerminatedCount;
@@ -241,3 +245,5 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 	
     return DependencyWorkersInternalContext;
 })();
+
+module.exports = DependencyWorkersInternalContext;

@@ -1,8 +1,14 @@
 'use strict';
 
-function DependencyWorkersClosure() {
-    var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
-    
+/* global console: false */
+/* global Promise: false */
+
+var JsBuiltinHashMap = require('js-builtin-hash-map');
+var DependencyWorkersInternalContext = require('dependency-workers-internal-context');
+var DependencyWorkersTaskHandle = require('dependency-workers-task-handle');
+var AsyncProxyMaster = require('async-proxy-master');
+
+var DependencyWorkers = (function DependencyWorkersClosure() {
     function DependencyWorkers(workerInputRetreiver) {
         var that = this;
         that._workerInputRetreiver = workerInputRetreiver;
@@ -10,11 +16,11 @@ function DependencyWorkersClosure() {
         that._workerPoolByTaskType = [];
         that._taskOptionsByTaskType = [];
         
-        if (!workerInputRetreiver['getWorkerTypeOptions']) {
+        if (!workerInputRetreiver.getWorkerTypeOptions) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'workerInputRetreiver.getWorkerTypeOptions() method';
         }
-        if (!workerInputRetreiver['getKeyAsString']) {
+        if (!workerInputRetreiver.getKeyAsString) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'workerInputRetreiver.getKeyAsString() method';
         }
@@ -25,7 +31,7 @@ function DependencyWorkersClosure() {
         
         var dependencyWorkers = this;
         
-        var strKey = this._workerInputRetreiver['getKeyAsString'](taskKey);
+        var strKey = this._workerInputRetreiver.getKeyAsString(taskKey);
         var addResult = this._internalContexts.tryAdd(strKey, function() {
             return new DependencyWorkersInternalContext();
         });
@@ -43,7 +49,7 @@ function DependencyWorkersClosure() {
                 addResult.iterator,
                 this._workerInputRetreiver);
 				
-            this._workerInputRetreiver['taskStarted'](internalContext.taskApi);
+            this._workerInputRetreiver.taskStarted(internalContext.taskApi);
         }
         
 
@@ -93,7 +99,7 @@ function DependencyWorkersClosure() {
         if (workerPool.length > 0) {
             worker = workerPool.pop();
         } else {
-            var workerArgs = that._workerInputRetreiver['getWorkerTypeOptions'](
+            var workerArgs = that._workerInputRetreiver.getWorkerTypeOptions(
                 workerType);
 
 			if (!workerArgs) {
@@ -103,9 +109,9 @@ function DependencyWorkersClosure() {
 			}
             
 			worker = new AsyncProxyMaster(
-                workerArgs['scriptsToImport'],
-                workerArgs['ctorName'],
-                workerArgs['ctorArgs']);
+                workerArgs.scriptsToImport,
+                workerArgs.ctorName,
+                workerArgs.ctorArgs);
         }
         
         if (!internalContext.waitingForWorkerResult) {
@@ -150,9 +156,7 @@ function DependencyWorkersClosure() {
 		return true;
 	};
     
-    asyncProxyScriptBlob.addMember(DependencyWorkersClosure, 'DependencyWorkers');
-    
     return DependencyWorkers;
-}
+})();
 
-var DependencyWorkers = DependencyWorkersClosure();
+module.exports = DependencyWorkers;

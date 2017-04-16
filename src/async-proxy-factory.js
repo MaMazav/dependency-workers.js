@@ -1,11 +1,12 @@
 'use strict';
 
-function AsyncProxyFactoryClosure() {
-    var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
+var AsyncProxyMaster = require('async-proxy-master');
+
+var AsyncProxyFactory = (function AsyncProxyFactoryClosure() {
     var factorySingleton = {};
 	
 	factorySingleton.create = function create(scriptsToImport, ctorName, methods, proxyCtor) {
-		if (!scriptsToImport || !(scriptsToImport.length > 0)) {
+		if ((!scriptsToImport) || !(scriptsToImport.length)) {
 			throw 'AsyncProxyFactory error: missing scriptsToImport (2nd argument)';
 		}
 		if (!methods) {
@@ -17,9 +18,9 @@ function AsyncProxyFactoryClosure() {
 			this.__workerHelperCtorArgs = convertArgs(arguments);
 		};
 		
-		ProxyClass.prototype['_getWorkerHelper'] = function getWorkerHelper() {
+		ProxyClass.prototype._getWorkerHelper = function getWorkerHelper() {
 			if (!this.__workerHelper) {
-				this.__workerHelper = new self['AsyncProxy']['AsyncProxyMaster'](
+				this.__workerHelper = new AsyncProxyMaster(
 					scriptsToImport, ctorName, this.__workerHelperCtorArgs || []);
 			}
 			
@@ -41,7 +42,7 @@ function AsyncProxyFactoryClosure() {
 		
 		var methodOptions = methodArgsDescription[0] || {};
 		ProxyClass.prototype[methodName] = function generatedFunction() {
-			var workerHelper = this['_getWorkerHelper']();
+			var workerHelper = this._getWorkerHelper();
 			var argsToSend = [];
 			for (var i = 0; i < arguments.length; ++i) {
 				var argDescription = methodArgsDescription[i + 1];
@@ -59,8 +60,8 @@ function AsyncProxyFactoryClosure() {
 			}
 			return workerHelper.callFunction(
 				methodName, argsToSend, methodArgsDescription[0]);
-		}
-	};
+		};
+	}
 	
 	function convertArgs(argsObject) {
 		var args = new Array(argsObject.length);
@@ -70,10 +71,8 @@ function AsyncProxyFactoryClosure() {
 		
 		return args;
 	}
-
-	asyncProxyScriptBlob.addMember(AsyncProxyFactoryClosure, 'AsyncProxyFactory');
     
     return factorySingleton;
-}
+})();
 
-var AsyncProxyFactory = AsyncProxyFactoryClosure();
+module.exports = AsyncProxyFactory;

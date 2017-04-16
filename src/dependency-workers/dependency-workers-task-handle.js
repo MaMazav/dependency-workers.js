@@ -40,7 +40,7 @@ var DependencyWorkersTaskHandle = (function DependencyWorkersTaskHandleClosure()
         this._internalContext.taskHandles.remove(this._taskHandlesIterator);
         this._taskHandlesIterator = null;
         
-        if (this._internalContext.taskHandles.getCount() == 0) {
+        if (this._internalContext.taskHandles.getCount() === 0) {
             if (!this._internalContext.isTerminated) {
                 // Should be called from statusUpdate when worker shut down
 				//this._internalContext.ended();
@@ -52,8 +52,8 @@ var DependencyWorkersTaskHandle = (function DependencyWorkersTaskHandleClosure()
             this._internalContext.setPriorityAndNotify(newPriority);
         }
     };
-    
-    asyncProxyScriptBlob.addMember(DependencyWorkersTaskHandleClosure, 'DependencyWorkersTaskHandle');
 
     return DependencyWorkersTaskHandle;
 })();
+
+module.exports = DependencyWorkersTaskHandle;

@@ -1,8 +1,8 @@
 'use strict';
 
-function SchedulerTaskClosure(DependencyWorkersTask) {
-    var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
-    
+var DependencyWorkersTask = require('dependency-workers-task');
+
+var SchedulerTask = (function SchedulerTaskClosure() {
     function SchedulerTask(scheduler, inputRetreiver, isDisableWorkerCache, wrappedTask) {
         var that = this;
 		DependencyWorkersTask.call(this, wrappedTask, wrappedTask.key, /*registerWrappedEvents=*/true);
@@ -16,6 +16,7 @@ function SchedulerTaskClosure(DependencyWorkersTask) {
         that._hasPendingDataToProcess = false;
         that._cancelPendingDataToProcess = false;
         that._isWorkerActive = false;
+		that._isTerminated = false;
         that._lastStatus = { 'isWaitingForWorkerResult': false };
     }
 	
@@ -24,8 +25,8 @@ function SchedulerTaskClosure(DependencyWorkersTask) {
     SchedulerTask.prototype._modifyStatus = function modifyStatus(status) {
         this._lastStatus = JSON.parse(JSON.stringify(status));
         this._checkIfJobDone(status);
-        this._lastStatus['isWaitingForWorkerResult'] =
-            status['isWaitingForWorkerResult'] || this._hasPendingDataToProcess;
+        this._lastStatus.isWaitingForWorkerResult =
+            status.isWaitingForWorkerResult || this._hasPendingDataToProcess;
         
 		return this._lastStatus;
     };
@@ -48,10 +49,10 @@ function SchedulerTaskClosure(DependencyWorkersTask) {
             DependencyWorkersTask.prototype.dataReady.call(this, newDataToProcess, workerType);
             
             var isStatusChanged =
-                this._lastStatus['isWaitingForWorkerResult'] &&
+                this._lastStatus.isWaitingForWorkerResult &&
                 !this._hasPendingDataToProcess;
             if (isStatusChanged) {
-                this._lastStatus['isWaitingForWorkerResult'] = false;
+                this._lastStatus.isWaitingForWorkerResult = false;
                 this._onEvent('statusUpdated', this._lastStatus);
             }
             
@@ -64,7 +65,7 @@ function SchedulerTaskClosure(DependencyWorkersTask) {
         this._hasPendingDataToProcess = true;
 
         if (!hadPendingDataToProcess && !this._isWorkerActive) {
-            this._scheduler['enqueueJob'](
+            this._scheduler.enqueueJob(
                 this._onScheduledBound, this);
         }
     };
@@ -89,7 +90,7 @@ function SchedulerTaskClosure(DependencyWorkersTask) {
         
         if (this._cancelPendingDataToProcess) {
             this._cancelPendingDataToProcess = false;
-			jobCallbacks['jobDone']();
+			jobCallbacks.jobDone();
         } else {
 			if (!this._hasPendingDataToProcess) {
 				throw 'AsyncProxy.DependencyWorkers: !enqueuedProcessJob';
@@ -109,7 +110,7 @@ function SchedulerTaskClosure(DependencyWorkersTask) {
     };
     
     SchedulerTask.prototype._checkIfJobDone = function checkIfJobDone(status) {
-        if (!this._isWorkerActive || status['isWaitingForWorkerResult']) {
+        if (!this._isWorkerActive || status.isWaitingForWorkerResult) {
             return;
         }
         
@@ -120,17 +121,14 @@ function SchedulerTaskClosure(DependencyWorkersTask) {
         this._isWorkerActive = false;
         
         if (this._hasPendingDataToProcess) {
-            this._scheduler['enqueueJob'](
+            this._scheduler.enqueueJob(
                 this._onScheduledBound, this);
         }
 
-        this._jobCallbacks['jobDone']();
+        this._jobCallbacks.jobDone();
     };
     
-    asyncProxyScriptBlob.addMember(
-        SchedulerTaskClosure, 'SchedulerTask', null, 'DependencyWorkersTask');
-    
     return SchedulerTask;
-}
+})();
 
-var SchedulerTask = SchedulerTaskClosure(DependencyWorkersTask);
+module.exports = SchedulerTask;

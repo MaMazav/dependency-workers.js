@@ -1,6 +1,6 @@
 'use strict';
 
-function ScriptsToImportPoolClosure() {
+var ScriptsToImportPool = (function ScriptsToImportPoolClosure() {
     function ScriptsToImportPool() {
         var that = this;
         that._scriptsByName = {};
@@ -40,22 +40,20 @@ function ScriptsToImportPoolClosure() {
             return source[2];
         }
 
-        var lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/)
+        var lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/);
         source = lastStackFrameRegex.exec(stack);
         if (source && source[1] !== "") {
             return source[1];
         }
         
-        if (errorWithStackTrace.fileName != undefined) {
+        if (errorWithStackTrace.fileName !== undefined) {
             return errorWithStackTrace.fileName;
         }
         
         throw 'ImageDecoderFramework.js: Could not get current script URL';
     };
     
-    self['asyncProxyScriptBlob'].addMember(ScriptsToImportPoolClosure, 'ScriptsToImportPool');
-    
     return ScriptsToImportPool;
-}
+})();
 
-var ScriptsToImportPool = ScriptsToImportPoolClosure();
+module.exports = ScriptsToImportPool;

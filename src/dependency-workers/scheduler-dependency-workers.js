@@ -1,8 +1,9 @@
 'use strict';
 
-function SchedulerDependencyWorkersClosure(DependencyWorkers) {
-    var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
-    
+var SchedulerWrapperInputRetreiver = require('scheduler-wrapper-input-retreiver');
+var DependencyWorkers = require('dependency-workers');
+
+var SchedulerDependencyWorkers = (function SchedulerDependencyWorkersClosure() {
     function SchedulerDependencyWorkers(scheduler, inputRetreiver) {
         var wrapperInputRetreiver = new SchedulerWrapperInputRetreiver(scheduler, inputRetreiver);
         DependencyWorkers.call(this, wrapperInputRetreiver);
@@ -10,9 +11,7 @@ function SchedulerDependencyWorkersClosure(DependencyWorkers) {
     
     SchedulerDependencyWorkers.prototype = Object.create(DependencyWorkers.prototype);
     
-    asyncProxyScriptBlob.addMember(SchedulerDependencyWorkersClosure, 'SchedulerDependencyWorkers', null, 'DependencyWorkers');
-    
     return SchedulerDependencyWorkers;
-}
+})();
 
-var SchedulerDependencyWorkers = SchedulerDependencyWorkersClosure(DependencyWorkers);
+module.exports = SchedulerDependencyWorkers;

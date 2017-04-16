@@ -44,13 +44,13 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
 	
 	Object.defineProperty(DependencyWorkersTask.prototype, 'dependTaskKeys', {
 		get: function getDependTaskKeys() {
-			return this._wrapped['dependTaskKeys'];
+			return this._wrapped.dependTaskKeys;
 		}
 	});
 	
 	Object.defineProperty(DependencyWorkersTask.prototype, 'dependTaskResults', {
 		get: function getDependTaskResults() {
-			return this._wrapped['dependTaskResults'];
+			return this._wrapped.dependTaskResults;
 		}
 	});
 	
@@ -75,7 +75,7 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
 		});
 	};
 
-    asyncProxyScriptBlob.addMember(DependencyWorkersTaskClosure, 'DependencyWorkersTask');
-
 	return DependencyWorkersTask;
 })();
+
+module.exports = DependencyWorkersTask;

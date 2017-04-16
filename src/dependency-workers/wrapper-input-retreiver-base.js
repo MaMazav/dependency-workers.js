@@ -1,14 +1,12 @@
 'use strict';
 
-function WrapperInputRetreiverBaseClosure() {
-    var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
-    
+var WrapperInputRetreiverBase = (function WrapperInputRetreiverBaseClosure() {
     function WrapperInputRetreiverBase(inputRetreiver) {
-        if (!inputRetreiver['getKeyAsString']) {
+        if (!inputRetreiver.getKeyAsString) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'inputRetreiver.getKeyAsString() method';
         }
-        if (!inputRetreiver['getWorkerTypeOptions']) {
+        if (!inputRetreiver.getWorkerTypeOptions) {
             throw 'AsyncProxy.DependencyWorkers: No ' +
                 'inputRetreiver.getTaskTypeOptions() method';
         }
@@ -24,18 +22,15 @@ function WrapperInputRetreiverBaseClosure() {
     };
     
     WrapperInputRetreiverBase.prototype.getKeyAsString = function(key) {
-        return this._inputRetreiver['getKeyAsString'](key);
+        return this._inputRetreiver.getKeyAsString(key);
     };
     
     
     WrapperInputRetreiverBase.prototype.getWorkerTypeOptions = function(taskType) {
-        return this._inputRetreiver['getWorkerTypeOptions'](taskType);
+        return this._inputRetreiver.getWorkerTypeOptions(taskType);
     };
     
-    asyncProxyScriptBlob.addMember(
-        WrapperInputRetreiverBaseClosure, 'WrapperInputRetreiverBase');
-    
     return WrapperInputRetreiverBase;
-}
+})();
 
-var WrapperInputRetreiverBase = WrapperInputRetreiverBaseClosure();
+module.exports = WrapperInputRetreiverBase;

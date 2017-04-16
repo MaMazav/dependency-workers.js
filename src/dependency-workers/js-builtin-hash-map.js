@@ -1,5 +1,7 @@
 'use strict';
 
+var HashMap = require('hash-map');
+
 var JsBuiltinHashMap = (function HashMapClosure() {
     
 // This class expose same API as HashMap but not requiring getHashCode() and isEqual() functions.
@@ -23,3 +25,5 @@ JsBuiltinHashMap.prototype = Object.create(HashMap.prototype);
 
 return JsBuiltinHashMap;
 })();
+
+module.exports = JsBuiltinHashMap;

@@ -1,7 +1,10 @@
 'use strict';
 
-function AsyncProxyMasterClosure() {
-    var asyncProxyScriptBlob = self['asyncProxyScriptBlob'];
+/* global Promise: false */
+
+var ScriptsToImportPool = require('scripts-to-import-pool');
+
+var AsyncProxyMaster = (function AsyncProxyMasterClosure() {
     var callId = 0;
     var isGetMasterEntryUrlCalled = false;
     var masterEntryUrl = getBaseUrlFromEntryScript();
@@ -10,26 +13,27 @@ function AsyncProxyMasterClosure() {
         var that = this;
         options = options || {};
         
-        var slaveScriptContentString = mainSlaveScriptContent.toString();
-        //var scriptUrl = AsyncProxySlave._getScriptName();
-        slaveScriptContentString = slaveScriptContentString.replace(
-            'SCRIPT_PLACEHOLDER', asyncProxyScriptBlob.getBlobUrl());
-        var slaveScriptContentBlob = new Blob(
-            ['(', slaveScriptContentString, ')()'],
-            { type: 'application/javascript' });
-        var slaveScriptUrl = URL.createObjectURL(slaveScriptContentBlob);
-        
         that._callbacks = [];
         that._pendingPromiseCalls = [];
         that._subWorkerById = [];
         that._subWorkers = [];
-        that._worker = new Worker(slaveScriptUrl);
-        that._worker.onmessage = onWorkerMessageInternal;
         that._userDataHandler = null;
         that._notReturnedFunctions = 0;
-        that._functionsBufferSize = options['functionsBufferSize'] || 5;
+        that._functionsBufferSize = options.functionsBufferSize || 5;
         that._pendingMessages = [];
         
+        var scriptName = getScriptName();
+        var slaveScriptContentString = mainSlaveScriptContent.toString();
+        slaveScriptContentString = slaveScriptContentString.replace(
+            'SCRIPT_PLACEHOLDER', scriptName);
+        var slaveScriptContentBlob = new Blob(
+            ['(', slaveScriptContentString, ')()'],
+            { type: 'application/javascript' });
+        var slaveScriptUrl = URL.createObjectURL(slaveScriptContentBlob);
+
+        that._worker = new Worker(slaveScriptUrl);
+        that._worker.onmessage = onWorkerMessageInternal;
+
         that._worker.postMessage({
             functionToCall: 'ctor',
             scriptsToImport: scriptsToImport,
@@ -58,10 +62,10 @@ function AsyncProxyMasterClosure() {
     
     AsyncProxyMaster.prototype.callFunction = function callFunction(functionToCall, args, options) {
         options = options || {};
-        var isReturnPromise = !!options['isReturnPromise'];
-        var transferablesArg = options['transferables'] || [];
+        var isReturnPromise = !!options.isReturnPromise;
+        var transferablesArg = options.transferables || [];
         var pathsToTransferables =
-            options['pathsToTransferablesInPromiseResult'];
+            options.pathsToTransferablesInPromiseResult;
         
         var localCallId = ++callId;
         var promiseOnMasterSide = null;
@@ -76,7 +80,7 @@ function AsyncProxyMasterClosure() {
             });
         }
         
-        var sendMessageFunction = options['isSendImmediately'] ?
+        var sendMessageFunction = options.isSendImmediately ?
             sendMessageToSlave: enqueueMessageToSlave;
 		
 		var transferables;
@@ -108,17 +112,17 @@ function AsyncProxyMasterClosure() {
         
         var callbackHandle = {
             isWorkerHelperCallback: true,
-            isMultipleTimeCallback: !!options['isMultipleTimeCallback'],
+            isMultipleTimeCallback: !!options.isMultipleTimeCallback,
             callId: localCallId,
             callbackName: callbackName,
-            pathsToTransferables: options['pathsToTransferables']
+            pathsToTransferables: options.pathsToTransferables
         };
         
         var internalCallbackHandle = {
-            isMultipleTimeCallback: !!options['isMultipleTimeCallback'],
+            isMultipleTimeCallback: !!options.isMultipleTimeCallback,
             callId: localCallId,
             callback: callback,
-            pathsToTransferables: options['pathsToTransferables']
+            pathsToTransferables: options.pathsToTransferables
         };
         
         this._callbacks[localCallId] = internalCallbackHandle;
@@ -168,14 +172,23 @@ function AsyncProxyMasterClosure() {
         }
         
         return transferables;
-    }
+    };
     
     // Private functions
+	
+	function getScriptName() {
+        var error = new Error();
+		return ScriptsToImportPool._getScriptName(error);
+	}
     
     function mainSlaveScriptContent() {
+		// This function is not run directly: It copied as a string into a blob
+		// and run in the Web Worker global scope
+		
+		/* global importScripts: false */
         importScripts('SCRIPT_PLACEHOLDER');
-		AsyncProxy['AsyncProxySlave'] = self['AsyncProxy']['AsyncProxySlaveSingleton'];
-        AsyncProxy['AsyncProxySlave']._initializeSlave();
+		/* global asyncProxy: false */
+        asyncProxy.AsyncProxySlave._initializeSlave();
     }
     
     function onWorkerMessage(that, workerEvent) {
@@ -188,20 +201,20 @@ function AsyncProxyMasterClosure() {
                 break;
             
             case 'promiseResult':
-                var promiseData = that._pendingPromiseCalls[callId];
+                var promiseToResolve = that._pendingPromiseCalls[callId];
                 delete that._pendingPromiseCalls[callId];
                 
                 var result = workerEvent.data.result;
-                promiseData.resolve(result);
+                promiseToResolve.resolve(result);
                 
                 break;
             
             case 'promiseFailure':
-                var promiseData = that._pendingPromiseCalls[callId];
+                var promiseToReject = that._pendingPromiseCalls[callId];
                 delete that._pendingPromiseCalls[callId];
                 
                 var reason = workerEvent.data.reason;
-                promiseData.reject(reason);
+                promiseToReject.reject(reason);
                 
                 break;
             
@@ -231,13 +244,13 @@ function AsyncProxyMasterClosure() {
                 break;
             
             case 'subWorkerCtor':
-                var subWorker = new Worker(workerEvent.data.scriptUrl);
+                var subWorkerCreated = new Worker(workerEvent.data.scriptUrl);
                 var id = workerEvent.data.subWorkerId;
                 
-                that._subWorkerById[id] = subWorker;
-                that._subWorkers.push(subWorker);
+                that._subWorkerById[id] = subWorkerCreated;
+                that._subWorkers.push(subWorkerCreated);
                 
-                subWorker.onmessage = function onSubWorkerMessage(subWorkerEvent) {
+                subWorkerCreated.onmessage = function onSubWorkerMessage(subWorkerEvent) {
                     enqueueMessageToSlave(
                         that, subWorkerEvent.ports, /*isFunctionCall=*/false, {
                             functionToCall: 'subWorkerOnMessage',
@@ -249,13 +262,13 @@ function AsyncProxyMasterClosure() {
                 break;
             
             case 'subWorkerPostMessage':
-                var subWorker = that._subWorkerById[workerEvent.data.subWorkerId];
-                subWorker.postMessage(workerEvent.data.data);
+                var subWorkerToPostMessage = that._subWorkerById[workerEvent.data.subWorkerId];
+                subWorkerToPostMessage.postMessage(workerEvent.data.data);
                 break;
             
             case 'subWorkerTerminate':
-                var subWorker = that._subWorkerById[workerEvent.data.subWorkerId];
-                subWorker.terminate();
+                var subWorkerToTerminate = that._subWorkerById[workerEvent.data.subWorkerId];
+                subWorkerToTerminate.terminate();
                 break;
             
             default:
@@ -312,9 +325,7 @@ function AsyncProxyMasterClosure() {
         return baseUrl;
     }
     
-    asyncProxyScriptBlob.addMember(AsyncProxyMasterClosure, 'AsyncProxyMaster');
-    
     return AsyncProxyMaster;
-}
+})();
 
-var AsyncProxyMaster = AsyncProxyMasterClosure();
+module.exports = AsyncProxyMaster;

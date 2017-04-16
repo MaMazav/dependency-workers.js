@@ -1,6 +1,12 @@
 'use strict';
 
-function AsyncProxySlaveClosure() {
+/* global console: false */
+/* global self: false */
+
+var AsyncProxyMaster = require('async-proxy-master');
+var SubWorkerEmulationForChrome = require('sub-worker-emulation-for-chrome');
+
+var AsyncProxySlave = (function AsyncProxySlaveClosure() {
     var slaveHelperSingleton = {};
     
     var beforeOperationListener = null;
@@ -37,7 +43,7 @@ function AsyncProxySlaveClosure() {
         
         var promiseThen = promise.then(function sendPromiseToMaster(result) {
             var transferables =
-				self['AsyncProxy']['AsyncProxyMaster']._extractTransferables(
+				AsyncProxyMaster._extractTransferables(
 					pathsToTransferables, result);
             
             self.postMessage(
@@ -84,7 +90,7 @@ function AsyncProxySlaveClosure() {
             }
             
             var transferables =
-				self['AsyncProxy']['AsyncProxyMaster']._extractTransferables(
+				AsyncProxyMaster._extractTransferables(
 					callbackHandle.pathsToTransferables, argumentsAsArray);
             
             self.postMessage({
@@ -102,13 +108,6 @@ function AsyncProxySlaveClosure() {
         return callbackWrapperFromSlaveSide;
     };
     
-    slaveHelperSingleton._getScriptName = function _getScriptName() {
-        var error = new Error();
-        var scriptName = ScriptsToImportPool._getScriptName(error);
-        
-        return scriptName;
-    };
-    
     function onMessage(event) {
         var functionNameToCall = event.data.functionToCall;
         var args = event.data.args;
@@ -121,12 +120,13 @@ function AsyncProxySlaveClosure() {
         
         switch (functionNameToCall) {
             case 'ctor':
-                self['AsyncProxy']['AsyncProxyMaster']._setEntryUrl(event.data.masterEntryUrl);
+                AsyncProxyMaster._setEntryUrl(event.data.masterEntryUrl);
                 
                 var scriptsToImport = event.data.scriptsToImport;
                 ctorName = event.data.ctorName;
                 
                 for (var i = 0; i < scriptsToImport.length; ++i) {
+					/* global importScripts: false */
                     importScripts(scriptsToImport[i]);
                 }
                 
@@ -144,8 +144,8 @@ function AsyncProxySlaveClosure() {
         }
         
         args = new Array(event.data.args.length);
-        for (var i = 0; i < event.data.args.length; ++i) {
-            var arg = event.data.args[i];
+        for (var j = 0; j < event.data.args.length; ++j) {
+            var arg = event.data.args[j];
             if (arg !== undefined &&
                 arg !== null &&
                 arg.isWorkerHelperCallback) {
@@ -153,7 +153,7 @@ function AsyncProxySlaveClosure() {
                 arg = slaveHelperSingleton.wrapCallbackFromSlaveSide(arg);
             }
             
-            args[i] = arg;
+            args[j] = arg;
         }
         
         var functionContainer = slaveSideMainInstance;
@@ -163,6 +163,7 @@ function AsyncProxySlaveClosure() {
             if (functionToCall) {
                 break;
             }
+			/* jshint proto: true */
             functionContainer = functionContainer.__proto__;
         }
         
@@ -194,7 +195,7 @@ function AsyncProxySlaveClosure() {
             var TypeCtor = member;
             
             var bindArgs = [null].concat(getArgumentsAsArray(arguments));
-            instance = new (Function.prototype.bind.apply(TypeCtor, bindArgs));
+            instance = new (Function.prototype.bind.apply(TypeCtor, bindArgs))();
         } catch (e) {
             throw new Error('Failed locating class name ' + ctorName + ': ' + e);
         }
@@ -211,15 +212,12 @@ function AsyncProxySlaveClosure() {
         return argumentsAsArray;
     }
     
-    if (self['Worker'] === undefined) {
-        var SubWorkerEmulationForChrome = self['SubWorkerEmulationForChrome'];
+    if (self.Worker === undefined) {
         SubWorkerEmulationForChrome.initialize(subWorkerIdToSubWorker);
-        self['Worker'] = SubWorkerEmulationForChrome;
+        self.Worker = SubWorkerEmulationForChrome;
     }
     
-    self['asyncProxyScriptBlob'].addMember(AsyncProxySlaveClosure, 'AsyncProxySlaveSingleton');
-    
     return slaveHelperSingleton;
-}
+})();
 
-var AsyncProxySlaveSingleton = AsyncProxySlaveClosure();
+module.exports = AsyncProxySlave;

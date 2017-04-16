@@ -1,5 +1,7 @@
 'use strict';
 
+var LinkedList = require('linked-list');
+
 var HashMap = (function HashMapClosure() {
 
 function HashMap(hasher) {
@@ -143,3 +145,5 @@ HashMap.prototype.getNextIterator = function getNextIterator(iterator) {
 
 return HashMap;
 })();
+
+module.exports = HashMap;

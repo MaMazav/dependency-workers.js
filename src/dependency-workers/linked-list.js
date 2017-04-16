@@ -97,3 +97,5 @@ LinkedList.prototype._validateIteratorOfThis =
 
 return LinkedList;
 })();
+
+module.exports = LinkedList;
