@@ -1,0 +1,40 @@
+{
+  "name": "async-proxy.js",
+  "version": "0.1.0",
+  "description": "Library for proxying classes into Web-Worker",
+  "main": "async-proxy.js",
+  "dependencies": {
+    "browserify": "^14.3.0",
+    "gulp": "^3.9.1",
+    "gulp-add-src": "^0.2.0",
+    "gulp-concat": "^2.5.2",
+    "gulp-filter": "^2.0.2",
+    "gulp-jshint": "^1.11.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^1.5.2",
+    "gulp-uglify": "^1.2.0",
+    "gulp-util": "^3.0.5",
+    "merge-stream": "^0.1.7",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaMazav/AsyncProxy.js.git"
+  },
+  "keywords": [
+    "Worker",
+    "Thread",
+    "Async"
+  ],
+  "author": "MaMazav",
+  "license": "Apache",
+  "bugs": {
+    "url": "https://github.com/MaMazav/AsyncProxy.js/issues"
+  },
+  "homepage": "https://github.com/MaMazav/AsyncProxy.js#readme"
+}
