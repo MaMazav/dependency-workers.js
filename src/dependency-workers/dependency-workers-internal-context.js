@@ -151,7 +151,7 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 	DependencyWorkersInternalContext.prototype.dataReady = function dataReady(newDataToProcess, workerType) {
 		if (this.isTerminated) {
 			throw 'AsyncProxy.DependencyWorkers: already terminated';
-		} else if (this.waitigForWorkerResult) {
+		} else if (this.waitingForWorkerResult) {
 			// Used in DependencyWorkers._startWorker() when previous worker has finished
 			this.pendingDataForWorker = newDataToProcess;
 			this.isPendingDataForWorker = true;
