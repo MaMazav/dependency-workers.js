@@ -35,6 +35,12 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 		this._dependTaskKeys = [];
 		this._dependTaskResults = [];
 		this._hasDependTaskData = [];
+		
+		this._pendingDelayedAction = false;
+		this._pendingDelayedDependencyData = [];
+		this._pendingDelayedEnded = false;
+		this._pendingDelayedNewData = false;
+		this._performPendingDelayedActionsBound = this._performPendingDelayedActions.bind(this);
 	}
     
     DependencyWorkersInternalContext.prototype.initialize = function(
@@ -63,20 +69,11 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         }
         this._dependsTaskHandles.clear();
 
-		var that = this;
-		setTimeout(function() {
-			iterator = that.taskHandles.getFirstIterator();
-			while (iterator !== null) {
-				var handle = that.taskHandles.getFromIterator(iterator);
-				iterator = that.taskHandles.getNextIterator(iterator);
-
-				if (handle._callbacks.onTerminated) {
-					handle._callbacks.onTerminated();
-				}
-			}
-			
-			that.taskHandles.clear();
-		});
+		this._pendingDelayedEnded = true;
+		if (!this._pendingDelayedAction) {
+			this._pendingDelayedAction = true;
+			setTimeout(this._performPendingDelayedActionsBound);
+		}
     };
 	
     DependencyWorkersInternalContext.prototype.setPriorityAndNotify = function(
@@ -134,18 +131,12 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
     DependencyWorkersInternalContext.prototype.newData = function(data) {
         this.hasProcessedData = true;
         this.lastProcessedData = data;
-		var that = this;
         
-		setTimeout(function() {
-			var handles = that.taskHandles;
-			var iterator = handles.getFirstIterator();
-			while (iterator !== null) {
-				var handle = handles.getFromIterator(iterator);
-				iterator = handles.getNextIterator(iterator);
-				
-				handle._callbacks.onData(data, that.taskKey);
-			}
-		});
+		this._pendingDelayedNewData = true;
+		if (!this._pendingDelayedAction) {
+			this._pendingDelayedAction = true;
+			setTimeout(this._performPendingDelayedActionsBound);
+		}
     };
     
 	DependencyWorkersInternalContext.prototype.dataReady = function dataReady(newDataToProcess, workerType) {
@@ -214,9 +205,14 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
         );
         
 		if (!gotData && addResult.value.taskHandle.hasData()) {
-			setTimeout(function() {
-                onDependencyTaskData(addResult.value.taskHandle.getLastData());
+			this._pendingDelayedDependencyData.push({
+				data: addResult.value.taskHandle.getLastData(),
+				onDependencyTaskData: onDependencyTaskData
 			});
+			if (!this._pendingDelayedAction) {
+				this._pendingDelayedAction = true;
+				setTimeout(this._performPendingDelayedActionsBound);
+			}
 		}
         
         function onDependencyTaskData(data) {
@@ -242,6 +238,46 @@ var DependencyWorkersInternalContext = (function DependencyWorkersInternalContex
 		}
         this.statusUpdate();
     };
+	
+	DependencyWorkersInternalContext.prototype._performPendingDelayedActions = function() {
+		var iterator;
+		var handle;
+		this._pendingDelayedAction = false;
+		
+		if (this._pendingDelayedDependencyData.length > 0) {
+			var localListeners = this._pendingDelayedDependencyData;
+			this._pendingDelayedDependencyData = [];
+			
+			for (var i = 0; i < localListeners.length; ++i) {
+				localListeners[i].onDependencyTaskData(localListeners[i].data);
+			}
+		}
+		
+		if (this._pendingDelayedNewData) {
+			var handles = this.taskHandles;
+			iterator = handles.getFirstIterator();
+			while (iterator !== null) {
+				handle = handles.getFromIterator(iterator);
+				iterator = handles.getNextIterator(iterator);
+				
+				handle._callbacks.onData(this.lastProcessedData, this.taskKey);
+			}
+		}
+		
+		if (this._pendingDelayedEnded) {
+			iterator = this.taskHandles.getFirstIterator();
+			while (iterator !== null) {
+				handle = this.taskHandles.getFromIterator(iterator);
+				iterator = this.taskHandles.getNextIterator(iterator);
+
+				if (handle._callbacks.onTerminated) {
+					handle._callbacks.onTerminated();
+				}
+			}
+			
+			this.taskHandles.clear();
+		}
+	};
 	
     return DependencyWorkersInternalContext;
 })();
