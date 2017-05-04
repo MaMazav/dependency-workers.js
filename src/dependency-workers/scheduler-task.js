@@ -12,7 +12,9 @@ var SchedulerTask = (function SchedulerTaskClosure() {
 		that._wrappedTask = wrappedTask;
         that._onScheduledBound = that._onScheduled.bind(that);
         
+		that._jobCallbacks = null;
         that._pendingDataToProcess = null;
+		that._pendingWorkerType = 0;
         that._hasPendingDataToProcess = false;
         that._cancelPendingDataToProcess = false;
         that._isWorkerActive = false;
@@ -60,6 +62,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         }
         
         this._pendingDataToProcess = newDataToProcess;
+		this._pendingWorkerType = workerType;
         this._cancelPendingDataToProcess = false;
         var hadPendingDataToProcess = this._hasPendingDataToProcess;
         this._hasPendingDataToProcess = true;
@@ -101,7 +104,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
 			this._jobCallbacks = jobCallbacks;
 			var data = this._pendingDataToProcess;
 			this._pendingDataToProcess = null;
-			DependencyWorkersTask.prototype.dataReady.call(this, data);
+			DependencyWorkersTask.prototype.dataReady.call(this, data, this._pendingWorkerType);
 		}
 		
 		if (this._isTerminated) {
@@ -120,12 +123,15 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         
         this._isWorkerActive = false;
         
+		var jobCallbacks = this._jobCallbacks;
+		this._jobCallbacks = null;
+		
         if (this._hasPendingDataToProcess) {
             this._scheduler.enqueueJob(
                 this._onScheduledBound, this);
         }
 
-        this._jobCallbacks.jobDone();
+        jobCallbacks.jobDone();
     };
     
     return SchedulerTask;

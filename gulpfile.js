@@ -33,6 +33,17 @@ var sources = [
     './src/dependency-workers/scheduler-dependency-workers.js'
 ];
 
+var vendorsProd = [
+    './vendor/resource-scheduler.dev.js'
+];
+
+var vendorsDebug = [
+    './vendor/resource-scheduler.dev.debug.js'
+];
+
+var scriptsDebug = vendorsDebug.concat(sources);
+var scriptsProd = vendorsProd.concat(sources);
+
 function build(isDebug) {
     var browserified = browserify({
         entries: ['./src/async-proxy-exports.js'],
@@ -44,7 +55,9 @@ function build(isDebug) {
         debug: isDebug
     });
     
-    var jshintStream = gulp.src(sources)
+    var scripts = isDebug ? scriptsDebug : scriptsProd;
+    var vendors = isDebug ? vendorsDebug : vendorsProd;
+    var jshintStream = gulp.src(scripts)
         //.pipe(sourcemaps.init({ loadMaps: true }))
         .pipe(buffer())
         .pipe(jshint())
@@ -59,6 +72,9 @@ function build(isDebug) {
         browserifyStream = browserifyStream
         .pipe(uglify())
         .on('error', gutil.log);
+    }
+    for (var i = 0; i < vendors.length; ++i) {
+        browserifyStream = browserifyStream.pipe(addsrc(vendors[i]));
     }
     
     var outFile = isDebug ? 'async-proxy.dev.debug' : 'async-proxy.dev';

@@ -4,15 +4,15 @@
 /* global Promise: false */
 
 var JsBuiltinHashMap = require('js-builtin-hash-map');
-var DependencyWorkersInternalContext = require('dependency-workers-internal-context');
-var DependencyWorkersTaskHandle = require('dependency-workers-task-handle');
+var DependencyWorkersTaskInternals = require('dependency-workers-task-internals');
+var DependencyWorkersTaskContext = require('dependency-workers-task-context');
 var AsyncProxyMaster = require('async-proxy-master');
 
 var DependencyWorkers = (function DependencyWorkersClosure() {
     function DependencyWorkers(workerInputRetreiver) {
         var that = this;
         that._workerInputRetreiver = workerInputRetreiver;
-        that._internalContexts = new JsBuiltinHashMap();
+        that._taskInternalss = new JsBuiltinHashMap();
         that._workerPoolByTaskType = [];
         that._taskOptionsByTaskType = [];
         
@@ -32,28 +32,28 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
         var dependencyWorkers = this;
         
         var strKey = this._workerInputRetreiver.getKeyAsString(taskKey);
-        var addResult = this._internalContexts.tryAdd(strKey, function() {
-            return new DependencyWorkersInternalContext();
+        var addResult = this._taskInternalss.tryAdd(strKey, function() {
+            return new DependencyWorkersTaskInternals();
         });
         
-        var internalContext = addResult.value;
-        var taskHandle = new DependencyWorkersTaskHandle(
-            internalContext, callbacks);
+        var taskInternals = addResult.value;
+        var taskContext = new DependencyWorkersTaskContext(
+            taskInternals, callbacks);
         
         if (addResult.isNew) {
-            internalContext.initialize(
+            taskInternals.initialize(
                 taskKey,
                 this,
                 this._workerInputRetreiver,
-                this._internalContexts,
+                this._taskInternalss,
                 addResult.iterator,
                 this._workerInputRetreiver);
 				
-            this._workerInputRetreiver.taskStarted(internalContext.taskApi);
+            this._workerInputRetreiver.taskStarted(taskInternals.taskApi);
         }
         
 
-        return taskHandle;
+        return taskContext;
     };
     
     DependencyWorkers.prototype.startTaskPromise =
@@ -61,13 +61,13 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
         
         var that = this;
         return new Promise(function(resolve, reject) {
-            var taskHandle = that.startTask(
+            var taskContext = that.startTask(
                 taskKey, { 'onData': onData, 'onTerminated': onTerminated });
             
-            var hasData = taskHandle.hasData();
+            var hasData = taskContext.hasData();
             var result;
             if (hasData) {
-                result = taskHandle.getLastData();
+                result = taskContext.getLastData();
             }
             
             function onData(data) {
@@ -85,9 +85,19 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
             }
         });
     };
+	
+	DependencyWorkers.prototype.terminateInactiveWorkers = function() {
+		for (var taskType in this._workerPoolByTaskType) {
+			var workerPool = this._workerPoolByTaskType[taskType];
+			for (var i = 0; i < workerPool; ++i) {
+				workerPool[i].terminate();
+				workerPool.length = 0;
+			}
+		}
+	};
     
     DependencyWorkers.prototype._dataReady = function dataReady(
-			internalContext, dataToProcess, workerType) {
+			taskInternals, dataToProcess, workerType) {
         
 		var that = this;
         var worker;
@@ -103,8 +113,8 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 workerType);
 
 			if (!workerArgs) {
-				internalContext.newData(dataToProcess);
-				internalContext.statusUpdate();
+				taskInternals.newData(dataToProcess);
+				taskInternals.statusUpdate();
 				return;
 			}
             
@@ -114,17 +124,17 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 workerArgs.ctorArgs);
         }
         
-        if (!internalContext.waitingForWorkerResult) {
-            internalContext.waitingForWorkerResult = true;
-            internalContext.statusUpdate();
+        if (!taskInternals.waitingForWorkerResult) {
+            taskInternals.waitingForWorkerResult = true;
+            taskInternals.statusUpdate();
         }
         
         worker.callFunction(
                 'start',
-                [dataToProcess, internalContext.taskKey],
+                [dataToProcess, taskInternals.taskKey],
                 {'isReturnPromise': true})
             .then(function(processedData) {
-                internalContext.newData(processedData);
+                taskInternals.newData(processedData);
                 return processedData;
             }).catch(function(e) {
                 console.log('Error in DependencyWorkers\' worker: ' + e);
@@ -132,26 +142,26 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
             }).then(function(result) {
                 workerPool.push(worker);
                 
-                if (!that._checkIfPendingData(internalContext)) {
-                    internalContext.waitingForWorkerResult = false;
-                    internalContext.statusUpdate();
+                if (!that._checkIfPendingData(taskInternals)) {
+                    taskInternals.waitingForWorkerResult = false;
+                    taskInternals.statusUpdate();
                 }
             });
     };
 	
-	DependencyWorkers.prototype._checkIfPendingData = function checkIfPendingData(internalContext) {
-		if (!internalContext.isPendingDataForWorker) {
+	DependencyWorkers.prototype._checkIfPendingData = function checkIfPendingData(taskInternals) {
+		if (!taskInternals.isPendingDataForWorker) {
 			return false;
 		}
 		
-		var dataToProcess = internalContext.pendingDataForWorker;
-		internalContext.isPendingDataForWorker = false;
-		internalContext.pendingDataForWorker = null;
+		var dataToProcess = taskInternals.pendingDataForWorker;
+		taskInternals.isPendingDataForWorker = false;
+		taskInternals.pendingDataForWorker = null;
 		
 		this._dataReady(
-			internalContext,
+			taskInternals,
 			dataToProcess,
-			internalContext.pendingWorkerType);
+			taskInternals.pendingWorkerType);
 		
 		return true;
 	};

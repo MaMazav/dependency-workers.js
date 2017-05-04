@@ -29,6 +29,10 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
 		return this._wrapped.registerTaskDependency(taskKey);
 	};
 	
+	DependencyWorkersTask.prototype.calculatePriority = function calculatePriority() {
+		return this._wrapped.calculatePriority();
+	};
+	
 	DependencyWorkersTask.prototype.on = function on(event, listener) {
 		if (!this._eventListeners[event]) {
 			throw 'AsyncProxy.DependencyWorkers: Task has no event ' + event;
