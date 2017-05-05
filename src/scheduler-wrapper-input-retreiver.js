@@ -12,7 +12,7 @@ var SchedulerWrapperInputRetreiver = (function SchedulerWrapperInputRetreiverClo
 		that._isDisableWorkerCache = {};
 
         if (!inputRetreiver.taskStarted) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
+            throw 'dependencyWorkers: No ' +
                 'inputRetreiver.taskStarted() method';
         }
     }

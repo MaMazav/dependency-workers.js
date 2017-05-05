@@ -6,7 +6,6 @@
 var JsBuiltinHashMap = require('js-builtin-hash-map');
 var DependencyWorkersTaskInternals = require('dependency-workers-task-internals');
 var DependencyWorkersTaskContext = require('dependency-workers-task-context');
-var AsyncProxyMaster = require('async-proxy-master');
 
 var DependencyWorkers = (function DependencyWorkersClosure() {
     function DependencyWorkers(workerInputRetreiver) {
@@ -17,11 +16,11 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
         that._taskOptionsByTaskType = [];
         
         if (!workerInputRetreiver.getWorkerTypeOptions) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
+            throw 'dependencyWorkers: No ' +
                 'workerInputRetreiver.getWorkerTypeOptions() method';
         }
         if (!workerInputRetreiver.getKeyAsString) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
+            throw 'dependencyWorkers: No ' +
                 'workerInputRetreiver.getKeyAsString() method';
         }
     }
@@ -79,7 +78,7 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 if (hasData) {
                     resolve(result);
                 } else {
-                    reject('AsyncProxy.DependencyWorkers: Internal ' +
+                    reject('dependencyWorkers: Internal ' +
                         'error - task terminated but no data returned');
                 }
             }
@@ -118,7 +117,7 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
 				return;
 			}
             
-			worker = new AsyncProxyMaster(
+			worker = new asyncProxy.AsyncProxyMaster(
                 workerArgs.scriptsToImport,
                 workerArgs.ctorName,
                 workerArgs.ctorArgs);

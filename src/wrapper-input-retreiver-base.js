@@ -3,11 +3,11 @@
 var WrapperInputRetreiverBase = (function WrapperInputRetreiverBaseClosure() {
     function WrapperInputRetreiverBase(inputRetreiver) {
         if (!inputRetreiver.getKeyAsString) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
+            throw 'dependencyWorkers: No ' +
                 'inputRetreiver.getKeyAsString() method';
         }
         if (!inputRetreiver.getWorkerTypeOptions) {
-            throw 'AsyncProxy.DependencyWorkers: No ' +
+            throw 'dependencyWorkers: No ' +
                 'inputRetreiver.getTaskTypeOptions() method';
         }
 
@@ -18,7 +18,7 @@ var WrapperInputRetreiverBase = (function WrapperInputRetreiverBaseClosure() {
     WrapperInputRetreiverBase.prototype.taskStarted =
             function taskStarted(task) {
         
-        throw 'AsyncProxy.WrapperInputRetreiverBase internal error: Not implemented taskStarted()';
+        throw 'dependencyWorkers: Not implemented taskStarted()';
     };
     
     WrapperInputRetreiverBase.prototype.getKeyAsString = function(key) {

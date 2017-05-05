@@ -37,7 +37,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
             newDataToProcess, workerType) {
                 
         if (this._isTerminated) {
-            throw 'AsyncProxy.DependencyWorkers: Data after termination';
+            throw 'dependencyWorkers: Data after termination';
         }
         
         if (this._isDisableWorkerCache[workerType] === undefined) {
@@ -75,7 +75,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
     
     SchedulerTask.prototype.terminate = function terminate() {
         if (this._isTerminated) {
-            throw 'AsyncProxy.DependencyWorkers: Double termination';
+            throw 'dependencyWorkers: Double termination';
         }
         
         this._isTerminated = true;
@@ -88,7 +88,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
             resource, jobContext, jobCallbacks) {
                 
         if (jobContext !== this) {
-            throw 'AsyncProxy.DependencyWorkers: Unexpected context';
+            throw 'dependencyWorkers: Unexpected context';
         }
         
         if (this._cancelPendingDataToProcess) {
@@ -96,7 +96,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
 			jobCallbacks.jobDone();
         } else {
 			if (!this._hasPendingDataToProcess) {
-				throw 'AsyncProxy.DependencyWorkers: !enqueuedProcessJob';
+				throw 'dependencyWorkers: !enqueuedProcessJob';
 			}
 			
 			this._isWorkerActive = true;
@@ -118,7 +118,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         }
         
         if (this._cancelPendingDataToProcess) {
-            throw 'AsyncProxy.DependencyWorkers: cancelPendingDataToProcess';
+            throw 'dependencyWorkers: cancelPendingDataToProcess';
         }
         
         this._isWorkerActive = false;

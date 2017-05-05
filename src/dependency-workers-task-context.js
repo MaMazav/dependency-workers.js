@@ -34,7 +34,7 @@ var DependencyWorkersTaskContext = (function DependencyWorkersTaskContextClosure
     
     DependencyWorkersTaskContext.prototype.unregister = function() {
         if (!this._taskContextsIterator) {
-            throw 'AsyncProxy.DependencyWorkers: Already unregistered';
+            throw 'dependencyWorkers: Already unregistered';
         }
 		
 		this.setPriorityCalculator(null);

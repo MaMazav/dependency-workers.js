@@ -15,30 +15,26 @@ var filter = require('gulp-filter');
 var mergeStream = require('merge-stream');
 
 var sources = [
-	//'./src/async-proxy-script-blob.js',
-    './src/sub-worker-emulation-for-chrome.js ',
-    './src/async-proxy-factory.js',
-    './src/async-proxy-master.js',
-    './src/async-proxy-slave.js',
-    './src/scripts-to-import-pool.js',
-    './src/dependency-workers/linked-list.js',
-    './src/dependency-workers/hash-map.js dependency-workers/js-builtin-hash-map.js',
-    './src/dependency-workers/dependency-workers-task.js',
-    './src/dependency-workers/dependency-workers.js',
-    './src/dependency-workers/dependency-workers-task-handle.js',
-    './src/dependency-workers/dependency-workers-internal-context.js',
-    './src/dependency-workers/wrapper-input-retreiver-base.js',
-    './src/dependency-workers/scheduler-task.js',
-    './src/dependency-workers/scheduler-wrapper-input-retreiver.js',
-    './src/dependency-workers/scheduler-dependency-workers.js'
+    './src/linked-list.js',
+    './src/hash-map.js dependency-workers/js-builtin-hash-map.js',
+    './src/dependency-workers-task.js',
+    './src/dependency-workers.js',
+    './src/dependency-workers-task-handle.js',
+    './src/dependency-workers-internal-context.js',
+    './src/wrapper-input-retreiver-base.js',
+    './src/scheduler-task.js',
+    './src/scheduler-wrapper-input-retreiver.js',
+    './src/scheduler-dependency-workers.js'
 ];
 
 var vendorsProd = [
-    './vendor/resource-scheduler.dev.js'
+    './vendor/resource-scheduler.dev.js',
+	'./vendor/async-proxy.dev.js'
 ];
 
 var vendorsDebug = [
-    './vendor/resource-scheduler.dev.debug.js'
+    './vendor/resource-scheduler.dev.debug.js',
+	'./vendor/async-proxy.dev.debug.js'
 ];
 
 var scriptsDebug = vendorsDebug.concat(sources);
@@ -46,12 +42,11 @@ var scriptsProd = vendorsProd.concat(sources);
 
 function build(isDebug) {
     var browserified = browserify({
-        entries: ['./src/async-proxy-exports.js'],
+        entries: ['./src/dependency-workers-exports.js'],
         paths: [
-            './src',
-            './src/dependency-workers'
+            './src'
         ],
-        standalone: 'async-proxy',
+        standalone: 'dependency-workers',
         debug: isDebug
     });
     
@@ -65,7 +60,7 @@ function build(isDebug) {
     
     var browserifyStream = browserified
         .bundle()
-        .pipe(source('async-proxy.src.js'))
+        .pipe(source('dependency-workers.src.js'))
         .pipe(buffer());
     
     if (!isDebug) {
@@ -77,10 +72,10 @@ function build(isDebug) {
         browserifyStream = browserifyStream.pipe(addsrc(vendors[i]));
     }
     
-    var outFile = isDebug ? 'async-proxy.dev.debug' : 'async-proxy.dev';
+    var outFile = isDebug ? 'dependency-workers.dev.debug' : 'dependency-workers.dev';
     
     browserifyStream = browserifyStream
-        .pipe(concat('async-proxy.src.js'))
+        .pipe(concat('dependency-workers.src.js'))
         .pipe(rename(outFile + '.js'))
         //.pipe(sourcemaps.write(outFile + '.js.map'))
         .pipe(gulp.dest('./'));

@@ -35,7 +35,7 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
 	
 	DependencyWorkersTask.prototype.on = function on(event, listener) {
 		if (!this._eventListeners[event]) {
-			throw 'AsyncProxy.DependencyWorkers: Task has no event ' + event;
+			throw 'dependencyWorkers: Task has no event ' + event;
 		}
 		this._eventListeners[event].push(listener);
 	};

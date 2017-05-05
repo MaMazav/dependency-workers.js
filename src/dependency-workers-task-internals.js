@@ -6,7 +6,7 @@ var DependencyWorkersTask = require('dependency-workers-task');
 
 var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClosure() {
 	function DependencyWorkersTaskInternals() {
-        // This class is not exposed outside AsyncProxy but as an internal struct, thus 
+        // This class is not exposed outside dependencyWorkers but as an internal struct, thus 
         // may contain public members
         
         this.isTerminated = false;
@@ -122,7 +122,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
     
 	DependencyWorkersTaskInternals.prototype.dataReady = function dataReady(newDataToProcess, workerType) {
 		if (this.isTerminated) {
-			throw 'AsyncProxy.DependencyWorkers: already terminated';
+			throw 'dependencyWorkers: already terminated';
 		} else if (this.waitingForWorkerResult) {
 			// Used in DependencyWorkers._startWorker() when previous worker has finished
 			this.pendingDataForWorker = newDataToProcess;
@@ -136,7 +136,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
 
     DependencyWorkersTaskInternals.prototype.terminate = function terminate() {
         if (this.isTerminated) {
-            throw 'AsyncProxy.DependencyWorkers: already terminated';
+            throw 'dependencyWorkers: already terminated';
         }
 		
         this.isTerminated = true;
@@ -149,7 +149,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
 	
 	DependencyWorkersTaskInternals.prototype.registerDependPriorityCalculator = function registerDependPriorityCalculator() {
 		if (this._isRegisteredDependPriorityCalculator) {
-			throw 'AsyncProxy.DependencyWorkers: already registered depend priority calculator';
+			throw 'dependencyWorkers: already registered depend priority calculator';
 		}
 		if (this._priorityCalculator === null) {
 			this._priorityCalculator = this.calculatePriority.bind(this);
@@ -167,7 +167,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
 	
 	DependencyWorkersTaskInternals.prototype.unregisterDependPriorityCalculator = function registerDependPriorityCalculator() {
 		if (!this._isRegisteredDependPriorityCalculator) {
-			throw 'AsyncProxy.DependencyWorkers: not registered depend priority calculator';
+			throw 'dependencyWorkers: not registered depend priority calculator';
 		}
 		this._isRegisteredDependPriorityCalculator = false;
 		
@@ -201,7 +201,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         });
         
         if (!addResult.isNew) {
-            throw 'AsyncProxy.DependencyWorkers: Cannot add task dependency twice';
+            throw 'dependencyWorkers: Cannot add task dependency twice';
         }
         
         var that = this;
@@ -238,7 +238,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         
         function onDependencyTaskTerminated() {
             if (isTerminated) {
-                throw 'AsyncProxy.DependencyWorkers: Double termination';
+                throw 'dependencyWorkers: Double termination';
             }
             isTerminated = true;
             that._dependsTaskTerminated();
