@@ -5,24 +5,24 @@ var DependencyWorkersTask = require('dependency-workers-task');
 var SchedulerTask = (function SchedulerTaskClosure() {
     function SchedulerTask(scheduler, inputRetreiver, isDisableWorkerCache, wrappedTask) {
         var that = this;
-		DependencyWorkersTask.call(this, wrappedTask, wrappedTask.key, /*registerWrappedEvents=*/true);
+        DependencyWorkersTask.call(this, wrappedTask, wrappedTask.key, /*registerWrappedEvents=*/true);
         that._scheduler = scheduler;
-		that._inputRetreiver = inputRetreiver;
-		that._isDisableWorkerCache = isDisableWorkerCache;
-		that._wrappedTask = wrappedTask;
+        that._inputRetreiver = inputRetreiver;
+        that._isDisableWorkerCache = isDisableWorkerCache;
+        that._wrappedTask = wrappedTask;
         that._onScheduledBound = that._onScheduled.bind(that);
         
-		that._jobCallbacks = null;
+        that._jobCallbacks = null;
         that._pendingDataToProcess = null;
-		that._pendingWorkerType = 0;
+        that._pendingWorkerType = 0;
         that._hasPendingDataToProcess = false;
         that._cancelPendingDataToProcess = false;
         that._isWorkerActive = false;
-		that._isTerminated = false;
+        that._isTerminated = false;
         that._lastStatus = { 'isWaitingForWorkerResult': false };
     }
-	
-	SchedulerTask.prototype = Object.create(DependencyWorkersTask.prototype);
+    
+    SchedulerTask.prototype = Object.create(DependencyWorkersTask.prototype);
     
     SchedulerTask.prototype._modifyStatus = function modifyStatus(status) {
         this._lastStatus = JSON.parse(JSON.stringify(status));
@@ -30,7 +30,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         this._lastStatus.isWaitingForWorkerResult =
             status.isWaitingForWorkerResult || this._hasPendingDataToProcess;
         
-		return this._lastStatus;
+        return this._lastStatus;
     };
     
     SchedulerTask.prototype.dataReady = function onDataReadyToProcess(
@@ -41,9 +41,9 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         }
         
         if (this._isDisableWorkerCache[workerType] === undefined) {
-			this._isDisableWorkerCache[workerType] = this._inputRetreiver.getWorkerTypeOptions(workerType) === null;
-		}
-		if (this._isDisableWorkerCache[workerType]) {
+            this._isDisableWorkerCache[workerType] = this._inputRetreiver.getWorkerTypeOptions(workerType) === null;
+        }
+        if (this._isDisableWorkerCache[workerType]) {
             this._pendingDataToProcess = null;
             this._cancelPendingDataToProcess =
                 this._hasPendingDataToProcess && !this._isWorkerActive;
@@ -62,7 +62,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         }
         
         this._pendingDataToProcess = newDataToProcess;
-		this._pendingWorkerType = workerType;
+        this._pendingWorkerType = workerType;
         this._cancelPendingDataToProcess = false;
         var hadPendingDataToProcess = this._hasPendingDataToProcess;
         this._hasPendingDataToProcess = true;
@@ -80,8 +80,8 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         
         this._isTerminated = true;
         if (!this._hasPendingDataToProcess) {
-			DependencyWorkersTask.prototype.terminate.call(this);
-		}
+            DependencyWorkersTask.prototype.terminate.call(this);
+        }
     };
     
     SchedulerTask.prototype._onScheduled = function dataReadyForWorker(
@@ -93,23 +93,23 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         
         if (this._cancelPendingDataToProcess) {
             this._cancelPendingDataToProcess = false;
-			jobCallbacks.jobDone();
+            jobCallbacks.jobDone();
         } else {
-			if (!this._hasPendingDataToProcess) {
-				throw 'dependencyWorkers: !enqueuedProcessJob';
-			}
-			
-			this._isWorkerActive = true;
-			this._hasPendingDataToProcess = false;
-			this._jobCallbacks = jobCallbacks;
-			var data = this._pendingDataToProcess;
-			this._pendingDataToProcess = null;
-			DependencyWorkersTask.prototype.dataReady.call(this, data, this._pendingWorkerType);
-		}
-		
-		if (this._isTerminated) {
-			DependencyWorkersTask.prototype.terminate.call(this);
-		}
+            if (!this._hasPendingDataToProcess) {
+                throw 'dependencyWorkers: !enqueuedProcessJob';
+            }
+            
+            this._isWorkerActive = true;
+            this._hasPendingDataToProcess = false;
+            this._jobCallbacks = jobCallbacks;
+            var data = this._pendingDataToProcess;
+            this._pendingDataToProcess = null;
+            DependencyWorkersTask.prototype.dataReady.call(this, data, this._pendingWorkerType);
+        }
+        
+        if (this._isTerminated) {
+            DependencyWorkersTask.prototype.terminate.call(this);
+        }
     };
     
     SchedulerTask.prototype._checkIfJobDone = function checkIfJobDone(status) {
@@ -123,9 +123,9 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         
         this._isWorkerActive = false;
         
-		var jobCallbacks = this._jobCallbacks;
-		this._jobCallbacks = null;
-		
+        var jobCallbacks = this._jobCallbacks;
+        this._jobCallbacks = null;
+        
         if (this._hasPendingDataToProcess) {
             this._scheduler.enqueueJob(
                 this._onScheduledBound, this);

@@ -8,8 +8,8 @@ var SchedulerWrapperInputRetreiver = (function SchedulerWrapperInputRetreiverClo
         WrapperInputRetreiverBase.call(this, inputRetreiver);
         var that = this;
         that._scheduler = scheduler;
-		that._inputRetreiver = inputRetreiver;
-		that._isDisableWorkerCache = {};
+        that._inputRetreiver = inputRetreiver;
+        that._isDisableWorkerCache = {};
 
         if (!inputRetreiver.taskStarted) {
             throw 'dependencyWorkers: No ' +
@@ -23,7 +23,7 @@ var SchedulerWrapperInputRetreiver = (function SchedulerWrapperInputRetreiverClo
             function taskStarted(task) {
         
         var wrapperTask = new SchedulerTask(
-			this._scheduler, this._inputRetreiver, this._isDisableWorkerCache, task);
+            this._scheduler, this._inputRetreiver, this._isDisableWorkerCache, task);
         return this._inputRetreiver.taskStarted(wrapperTask);
     };
     

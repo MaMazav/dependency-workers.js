@@ -7,7 +7,7 @@ var HashMap = (function HashMapClosure() {
 function HashMap(hasher) {
     var that = this;
     that._hasher = hasher;
-	that.clear();
+    that.clear();
 }
 
 HashMap.prototype.clear = function clear() {

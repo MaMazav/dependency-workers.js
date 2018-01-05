@@ -47,7 +47,7 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 this._taskInternalss,
                 addResult.iterator,
                 this._workerInputRetreiver);
-				
+                
             this._workerInputRetreiver.taskStarted(taskInternals.taskApi);
         }
         
@@ -84,21 +84,21 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
             }
         });
     };
-	
-	DependencyWorkers.prototype.terminateInactiveWorkers = function() {
-		for (var taskType in this._workerPoolByTaskType) {
-			var workerPool = this._workerPoolByTaskType[taskType];
-			for (var i = 0; i < workerPool; ++i) {
-				workerPool[i].terminate();
-				workerPool.length = 0;
-			}
-		}
-	};
+    
+    DependencyWorkers.prototype.terminateInactiveWorkers = function() {
+        for (var taskType in this._workerPoolByTaskType) {
+            var workerPool = this._workerPoolByTaskType[taskType];
+            for (var i = 0; i < workerPool.length; ++i) {
+                workerPool[i].proxy.terminate();
+            }
+            workerPool.length = 0;
+        }
+    };
     
     DependencyWorkers.prototype._dataReady = function dataReady(
-			taskInternals, dataToProcess, workerType) {
+            taskInternals, dataToProcess, workerType) {
         
-		var that = this;
+        var that = this;
         var worker;
         var workerPool = that._workerPoolByTaskType[workerType];
         if (!workerPool) {
@@ -111,16 +111,20 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
             var workerArgs = that._workerInputRetreiver.getWorkerTypeOptions(
                 workerType);
 
-			if (!workerArgs) {
-				taskInternals.newData(dataToProcess);
-				taskInternals.statusUpdate();
-				return;
-			}
+            if (!workerArgs) {
+                taskInternals.newData(dataToProcess);
+                taskInternals.statusUpdate();
+                return;
+            }
             
-			worker = new asyncProxy.AsyncProxyMaster(
-                workerArgs.scriptsToImport,
-                workerArgs.ctorName,
-                workerArgs.ctorArgs);
+            worker = {
+                proxy: new asyncProxy.AsyncProxyMaster(
+                    workerArgs.scriptsToImport,
+                    workerArgs.ctorName,
+                    workerArgs.ctorArgs),
+                transferables: workerArgs.transferables,
+                pathToTransferablesInPromiseResult: workerArgs.pathToTransferablesInPromiseResult
+            };
         }
         
         if (!taskInternals.waitingForWorkerResult) {
@@ -128,10 +132,15 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
             taskInternals.statusUpdate();
         }
         
-        worker.callFunction(
-                'start',
-                [dataToProcess, taskInternals.taskKey],
-                {'isReturnPromise': true})
+        var args = [dataToProcess, taskInternals.taskKey];
+        var options = {
+            'isReturnPromise': true,
+            'transferables': worker.transferables,
+            'pathToTransferablesInPromiseResult': worker.pathToTransferablesInPromiseResult
+        };
+
+        var promise = worker.proxy.callFunction('start', args, options);
+        promise
             .then(function(processedData) {
                 taskInternals.newData(processedData);
                 return processedData;
@@ -147,23 +156,23 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 }
             });
     };
-	
-	DependencyWorkers.prototype._checkIfPendingData = function checkIfPendingData(taskInternals) {
-		if (!taskInternals.isPendingDataForWorker) {
-			return false;
-		}
-		
-		var dataToProcess = taskInternals.pendingDataForWorker;
-		taskInternals.isPendingDataForWorker = false;
-		taskInternals.pendingDataForWorker = null;
-		
-		this._dataReady(
-			taskInternals,
-			dataToProcess,
-			taskInternals.pendingWorkerType);
-		
-		return true;
-	};
+    
+    DependencyWorkers.prototype._checkIfPendingData = function checkIfPendingData(taskInternals) {
+        if (!taskInternals.isPendingDataForWorker) {
+            return false;
+        }
+        
+        var dataToProcess = taskInternals.pendingDataForWorker;
+        taskInternals.isPendingDataForWorker = false;
+        taskInternals.pendingDataForWorker = null;
+        
+        this._dataReady(
+            taskInternals,
+            dataToProcess,
+            taskInternals.pendingWorkerType);
+        
+        return true;
+    };
     
     return DependencyWorkers;
 })();
