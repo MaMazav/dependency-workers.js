@@ -50,7 +50,6 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 
             this._workerInputRetreiver.taskStarted(taskInternals.taskApi);
         }
-        
 
         return taskContext;
     };

@@ -5,12 +5,19 @@ var DependencyWorkersTask = require('dependency-workers-task');
 var SchedulerTask = (function SchedulerTaskClosure() {
     function SchedulerTask(scheduler, inputRetreiver, isDisableWorkerCache, wrappedTask) {
         var that = this;
-        DependencyWorkersTask.call(this, wrappedTask, wrappedTask.key, /*registerWrappedEvents=*/true);
+        DependencyWorkersTask.call(
+            this,
+            wrappedTask,
+            wrappedTask.key,
+            /*registerWrappedEvents=*/true,
+            /*additionalEvents=*/['schedulerAborted']);
+            
         that._scheduler = scheduler;
         that._inputRetreiver = inputRetreiver;
         that._isDisableWorkerCache = isDisableWorkerCache;
         that._wrappedTask = wrappedTask;
         that._onScheduledBound = that._onScheduled.bind(that);
+        that._onAbortedBound = that._onAborted.bind(that);
         
         that._jobCallbacks = null;
         that._pendingDataToProcess = null;
@@ -19,6 +26,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         that._cancelPendingDataToProcess = false;
         that._isWorkerActive = false;
         that._isTerminated = false;
+        that._isAbortedByScheduler = false;
         that._lastStatus = { 'isWaitingForWorkerResult': false };
     }
     
@@ -38,6 +46,11 @@ var SchedulerTask = (function SchedulerTaskClosure() {
                 
         if (this._isTerminated) {
             throw 'dependencyWorkers: Data after termination';
+        }
+        
+        if (this._isAbortedByScheduler) {
+            throw 'dependencyWorkers: Data after scheduler aborted. ' +
+                'Did you registered to task.on(\'schedulerAborted\') event?';
         }
         
         if (this._isDisableWorkerCache[workerType] === undefined) {
@@ -69,7 +82,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
 
         if (!hadPendingDataToProcess && !this._isWorkerActive) {
             this._scheduler.enqueueJob(
-                this._onScheduledBound, this);
+                this._onScheduledBound, this, this._onAbortedBound);
         }
     };
     
@@ -112,6 +125,28 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         }
     };
     
+    SchedulerTask.prototype._onAborted = function onAborted(jobContext) {
+        if (jobContext !== this) {
+            throw 'dependencyWorkers: Unexpected context';
+        }
+        
+        if (this._isAbortedByScheduler) {
+            throw 'dependencyWorkers: Scheduler aborted twice';
+        }
+        
+        if (!this._hasPendingDataToProcess) {
+            throw 'dependencyWorkers: Scheduler aborted without job';
+        }
+        
+        this._isAbortedByScheduler = true;
+
+        if (this._isTerminated) {
+            DependencyWorkersTask.prototype.terminate.call(this);
+        } else {
+            this._onEvent('schedulerAborted');
+        }
+    };
+    
     SchedulerTask.prototype._checkIfJobDone = function checkIfJobDone(status) {
         if (!this._isWorkerActive || status.isWaitingForWorkerResult) {
             return;
@@ -128,7 +163,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         
         if (this._hasPendingDataToProcess) {
             this._scheduler.enqueueJob(
-                this._onScheduledBound, this);
+                this._onScheduledBound, this, this._onAbortedBound);
         }
 
         jobCallbacks.jobDone();

@@ -1,7 +1,7 @@
 'use strict';
 
 var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
-    function DependencyWorkersTask(wrapped, key, registerWrappedEvents) {
+    function DependencyWorkersTask(wrapped, key, registerWrappedEvents, additionalEvents) {
         this._wrapped = wrapped;
         this._key = key;
         this._eventListeners = {
@@ -13,6 +13,12 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
         if (registerWrappedEvents) {
             for (var event in this._eventListeners) {
                 this._registerWrappedEvent(event);
+            }
+        }
+        
+        if (additionalEvents) {
+            for (var i = 0; i < additionalEvents.length; ++i) {
+                this._eventListeners[additionalEvents[i]] = [];
             }
         }
     }

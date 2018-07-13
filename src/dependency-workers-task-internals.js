@@ -229,6 +229,8 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
             }
         }
         
+        return addResult.value.taskContext;
+        
         function onDependencyTaskData(data) {
             that._dependTaskResults[index] = data;
             that._hasDependTaskData[index] = true;
