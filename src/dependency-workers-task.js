@@ -3,6 +3,7 @@
 var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
     function DependencyWorkersTask(wrapped, key, registerWrappedEvents, additionalEvents) {
         this._wrapped = wrapped;
+        wrapped.__wrappigTaskForDebug = this;
         this._key = key;
         this._eventListeners = {
             'dependencyTaskData': [],
@@ -23,8 +24,16 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
         }
     }
     
+    Object.defineProperty(DependencyWorkersTask.prototype, 'isTerminated', { get: function() {
+        return this._wrapped.isTerminated;
+    } });
+    
     DependencyWorkersTask.prototype.dataReady = function dataReady(newDataToProcess, workerType) {
         this._wrapped.dataReady(newDataToProcess, workerType);
+    };
+    
+    DependencyWorkersTask.prototype.detachBeforeTermination = function detach() {
+        this._wrapped.detachBeforeTermination();
     };
     
     DependencyWorkersTask.prototype.terminate = function terminate() {

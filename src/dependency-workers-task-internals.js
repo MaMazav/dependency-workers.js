@@ -10,6 +10,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         // may contain public members
         
         this.isTerminated = false;
+        this.isTerminatedImmediatelyForDebug = false;
         this.lastProcessedData = null;
         this.taskApi = null;
         this.hasProcessedData = false;
@@ -32,6 +33,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         this._dependsTaskContexts = null;
         this._priorityCalculator = null;
         this._isRegisteredDependPriorityCalculator = false;
+        this._isDetached = false;
         
         this._dependTaskKeys = [];
         this._dependTaskResults = [];
@@ -55,21 +57,10 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         //this._dependsTaskContexts = new HashMap(hasher);
         this._dependsTaskContexts = new JsBuiltinHashMap();
         this.taskApi = new DependencyWorkersTask(this, taskKey);
+        this._registerDependPriorityCalculator();
     };
     
     DependencyWorkersTaskInternals.prototype.ended = function() {
-        this._parentList.remove(this._parentIterator);
-        this._parentIterator = null;
-
-        var iterator = this._dependsTaskContexts.getFirstIterator();
-        while (iterator !== null) {
-            var context = this._dependsTaskContexts.getFromIterator(iterator).taskContext;
-            iterator = this._dependsTaskContexts.getNextIterator(iterator);
-            
-            context.unregister();
-        }
-        this._dependsTaskContexts.clear();
-
         this._pendingDelayedEnded = true;
         if (!this._pendingDelayedAction) {
             this._pendingDelayedAction = true;
@@ -93,7 +84,6 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
     };
     
     DependencyWorkersTaskInternals.prototype.calculatePriority = function() {
-        
         var iterator = this.priorityCalculators.getFirstIterator();
         var isFirst = true;
         var priority = 0;
@@ -102,6 +92,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
             var currentPriority = priorityCalculator();
             if (isFirst || currentPriority > priority) {
                 priority = currentPriority;
+                isFirst = false;
             }
             iterator = this.priorityCalculators.getNextIterator(iterator);
         }
@@ -133,50 +124,40 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
                 this, newDataToProcess, workerType);
         }
     };
+    
+    DependencyWorkersTaskInternals.prototype.detachBeforeTermination = function detach() {
+        if (this._isDetached) {
+            return;
+        }
+        
+        this._isDetached = true;
+        this._parentList.remove(this._parentIterator);
+        this._parentIterator = null;
+
+        var iterator = this._dependsTaskContexts.getFirstIterator();
+        while (iterator !== null) {
+            var context = this._dependsTaskContexts.getFromIterator(iterator).taskContext;
+            iterator = this._dependsTaskContexts.getNextIterator(iterator);
+            
+            context.unregister();
+        }
+        this._dependsTaskContexts.clear();
+        
+        this._unregisterDependPriorityCalculator();
+    };
 
     DependencyWorkersTaskInternals.prototype.terminate = function terminate() {
         if (this.isTerminated) {
             throw 'dependencyWorkers: already terminated';
         }
         
+        this.detachBeforeTermination();
         this.isTerminated = true;
+
         if (this.waitingForWorkerResult) {
             this._isActualTerminationPending = true;
         } else {
             this.ended();
-        }
-    };
-    
-    DependencyWorkersTaskInternals.prototype.registerDependPriorityCalculator = function registerDependPriorityCalculator() {
-        if (this._isRegisteredDependPriorityCalculator) {
-            throw 'dependencyWorkers: already registered depend priority calculator';
-        }
-        if (this._priorityCalculator === null) {
-            this._priorityCalculator = this.calculatePriority.bind(this);
-        }
-        this._isRegisteredDependPriorityCalculator = true;
-        
-        var iterator = this._dependsTaskContexts.getFirstIterator();
-        while (iterator !== null) {
-            var context = this._dependsTaskContexts.getFromIterator(iterator).taskContext;
-            iterator = this._dependsTaskContexts.getNextIterator(iterator);
-            
-            context.setPriorityCalculator(this._priorityCalculator);
-        }
-    };
-    
-    DependencyWorkersTaskInternals.prototype.unregisterDependPriorityCalculator = function registerDependPriorityCalculator() {
-        if (!this._isRegisteredDependPriorityCalculator) {
-            throw 'dependencyWorkers: not registered depend priority calculator';
-        }
-        this._isRegisteredDependPriorityCalculator = false;
-        
-        var iterator = this._dependsTaskContexts.getFirstIterator();
-        while (iterator !== null) {
-            var context = this._dependsTaskContexts.getFromIterator(iterator).taskContext;
-            iterator = this._dependsTaskContexts.getNextIterator(iterator);
-            
-            context.setPriorityCalculator(null);
         }
     };
     
@@ -206,7 +187,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         
         var that = this;
         var gotData = false;
-        var isTerminated = false;
+        var isDependsTaskTerminated = false;
         var index = this._dependTaskKeys.length;
         
         this._dependTaskKeys[index] = taskKey;
@@ -214,9 +195,18 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         addResult.value.taskContext = this._parentDependencyWorkers.startTask(
             taskKey, {
                 'onData': onDependencyTaskData,
-                'onTerminated': onDependencyTaskTerminated
+                'onTerminated': onDependencyTaskTerminated,
+                calleeForDebug: this
             }
         );
+        
+        if (addResult.value.taskContext.isTerminated && !addResult.value.taskContext.isTerminatedImmediatelyForDebug) {
+            throw 'dependency-workers error: dependant task already terminated';
+        }
+        
+        if (this._isRegisteredDependPriorityCalculator) {
+            addResult.value.taskContext.setPriorityCalculator(this._priorityCalculator);
+        }
         
         if (!gotData && addResult.value.taskContext.hasData()) {
             this._pendingDelayedDependencyData.push({
@@ -239,14 +229,47 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         }
         
         function onDependencyTaskTerminated() {
-            if (isTerminated) {
+            if (isDependsTaskTerminated) {
                 throw 'dependencyWorkers: Double termination';
             }
-            isTerminated = true;
+            isDependsTaskTerminated = true;
             that._dependsTaskTerminated();
         }
     };
     
+    DependencyWorkersTaskInternals.prototype._registerDependPriorityCalculator = function registerDependPriorityCalculator() {
+        if (this._isRegisteredDependPriorityCalculator) {
+            throw 'dependencyWorkers: already registered depend priority calculator';
+        }
+        if (this._priorityCalculator === null) {
+            this._priorityCalculator = this.calculatePriority.bind(this);
+        }
+        this._isRegisteredDependPriorityCalculator = true;
+        
+        var iterator = this._dependsTaskContexts.getFirstIterator();
+        while (iterator !== null) {
+            var context = this._dependsTaskContexts.getFromIterator(iterator).taskContext;
+            iterator = this._dependsTaskContexts.getNextIterator(iterator);
+            
+            context.setPriorityCalculator(this._priorityCalculator);
+        }
+    };
+    
+    DependencyWorkersTaskInternals.prototype._unregisterDependPriorityCalculator = function unregisterDependPriorityCalculator() {
+        if (!this._isRegisteredDependPriorityCalculator) {
+            throw 'dependencyWorkers: not registered depend priority calculator';
+        }
+        this._isRegisteredDependPriorityCalculator = false;
+        
+        var iterator = this._dependsTaskContexts.getFirstIterator();
+        while (iterator !== null) {
+            var context = this._dependsTaskContexts.getFromIterator(iterator).taskContext;
+            iterator = this._dependsTaskContexts.getNextIterator(iterator);
+            
+            context.setPriorityCalculator(null);
+        }
+    };
+
     DependencyWorkersTaskInternals.prototype._dependsTaskTerminated = function dependsTaskTerminated() {
         ++this._dependsTasksTerminatedCount;
         if (this._dependsTasksTerminatedCount === this._dependsTaskContexts.getCount()) {

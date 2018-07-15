@@ -49,6 +49,10 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 this._workerInputRetreiver);
                 
             this._workerInputRetreiver.taskStarted(taskInternals.taskApi);
+            
+            if (taskInternals.isTerminated) {
+                taskInternals.isTerminatedImmediatelyForDebug = true;
+            }
         }
 
         return taskContext;

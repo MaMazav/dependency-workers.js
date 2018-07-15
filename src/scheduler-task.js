@@ -15,9 +15,8 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         that._scheduler = scheduler;
         that._inputRetreiver = inputRetreiver;
         that._isDisableWorkerCache = isDisableWorkerCache;
-        that._wrappedTask = wrappedTask;
         that._onScheduledBound = that._onScheduled.bind(that);
-        that._onAbortedBound = that._onAborted.bind(that);
+        that._onAbortedBySchedulerBound = that._onAbortedByScheduler.bind(that);
         
         that._jobCallbacks = null;
         that._pendingDataToProcess = null;
@@ -25,9 +24,17 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         that._hasPendingDataToProcess = false;
         that._cancelPendingDataToProcess = false;
         that._isWorkerActive = false;
-        that._isTerminated = false;
+        that._isTerminationStarted = false;
+        that._isAborted = false;
         that._isAbortedByScheduler = false;
         that._lastStatus = { 'isWaitingForWorkerResult': false };
+        
+        that.on('statusUpdated', function(status) {
+            if (that._scheduler.shouldAbort(this)) {
+                that._cancelPendingDataIfExist();
+                this._abort();
+            }
+        });
     }
     
     SchedulerTask.prototype = Object.create(DependencyWorkersTask.prototype);
@@ -44,11 +51,11 @@ var SchedulerTask = (function SchedulerTaskClosure() {
     SchedulerTask.prototype.dataReady = function onDataReadyToProcess(
             newDataToProcess, workerType) {
                 
-        if (this._isTerminated) {
+        if (this._isTerminationStarted) {
             throw 'dependencyWorkers: Data after termination';
         }
         
-        if (this._isAbortedByScheduler) {
+        if (this._isAborted) {
             throw 'dependencyWorkers: Data after scheduler aborted. ' +
                 'Did you registered to task.on(\'schedulerAborted\') event?';
         }
@@ -58,8 +65,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         }
         if (this._isDisableWorkerCache[workerType]) {
             this._pendingDataToProcess = null;
-            this._cancelPendingDataToProcess =
-                this._hasPendingDataToProcess && !this._isWorkerActive;
+            this._cancelPendingDataIfExist();
             this._hasPendingDataToProcess = false;
             DependencyWorkersTask.prototype.dataReady.call(this, newDataToProcess, workerType);
             
@@ -82,16 +88,17 @@ var SchedulerTask = (function SchedulerTaskClosure() {
 
         if (!hadPendingDataToProcess && !this._isWorkerActive) {
             this._scheduler.enqueueJob(
-                this._onScheduledBound, this, this._onAbortedBound);
+                this._onScheduledBound, this, this._onAbortedBySchedulerBound);
         }
     };
     
     SchedulerTask.prototype.terminate = function terminate() {
-        if (this._isTerminated) {
+        if (this._isTerminationStarted) {
             throw 'dependencyWorkers: Double termination';
         }
         
-        this._isTerminated = true;
+        this.detachBeforeTermination();
+        this._isTerminationStarted = true;
         if (!this._hasPendingDataToProcess) {
             DependencyWorkersTask.prototype.terminate.call(this);
         }
@@ -104,28 +111,30 @@ var SchedulerTask = (function SchedulerTaskClosure() {
             throw 'dependencyWorkers: Unexpected context';
         }
         
+        if (!this._hasPendingDataToProcess) {
+            throw 'dependencyWorkers: !enqueuedProcessJob';
+        }
+
+        var data = this._pendingDataToProcess;
+        this._pendingDataToProcess = null;
+
         if (this._cancelPendingDataToProcess) {
             this._cancelPendingDataToProcess = false;
             jobCallbacks.jobDone();
         } else {
-            if (!this._hasPendingDataToProcess) {
-                throw 'dependencyWorkers: !enqueuedProcessJob';
-            }
             
             this._isWorkerActive = true;
             this._hasPendingDataToProcess = false;
             this._jobCallbacks = jobCallbacks;
-            var data = this._pendingDataToProcess;
-            this._pendingDataToProcess = null;
             DependencyWorkersTask.prototype.dataReady.call(this, data, this._pendingWorkerType);
         }
         
-        if (this._isTerminated) {
+        if (this._isTerminationStarted) {
             DependencyWorkersTask.prototype.terminate.call(this);
         }
     };
     
-    SchedulerTask.prototype._onAborted = function onAborted(jobContext) {
+    SchedulerTask.prototype._onAbortedByScheduler = function onAborted(jobContext) {
         if (jobContext !== this) {
             throw 'dependencyWorkers: Unexpected context';
         }
@@ -139,12 +148,27 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         }
         
         this._isAbortedByScheduler = true;
-
-        if (this._isTerminated) {
+        this._abort();
+    };
+    
+    SchedulerTask.prototype._abort = function abort() {
+        if (this.isTerminated) {
+            return;
+        }
+        
+        var isAlreadyAborted = this._isAborted;
+        this._isAborted = true;
+        this.detachBeforeTermination();
+        if (this._isTerminationStarted) {
             DependencyWorkersTask.prototype.terminate.call(this);
-        } else {
+        } else if (!isAlreadyAborted) {
             this._onEvent('schedulerAborted');
         }
+    };
+    
+    SchedulerTask.prototype._cancelPendingDataIfExist = function cancelPendingDataIfExist() {
+        this._cancelPendingDataToProcess =
+            this._hasPendingDataToProcess && !this._isWorkerActive;
     };
     
     SchedulerTask.prototype._checkIfJobDone = function checkIfJobDone(status) {
@@ -163,7 +187,7 @@ var SchedulerTask = (function SchedulerTaskClosure() {
         
         if (this._hasPendingDataToProcess) {
             this._scheduler.enqueueJob(
-                this._onScheduledBound, this, this._onAbortedBound);
+                this._onScheduledBound, this, this._onAbortedBySchedulerBound);
         }
 
         jobCallbacks.jobDone();
