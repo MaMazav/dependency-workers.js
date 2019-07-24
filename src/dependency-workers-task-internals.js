@@ -63,7 +63,6 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
     DependencyWorkersTaskInternals.prototype.ended = function() {
         this._pendingDelayedEnded = true;
         if (!this._pendingDelayedAction) {
-            this._pendingDelayedAction = true;
             setTimeout(this._performPendingDelayedActionsBound);
         }
     };
@@ -145,6 +144,20 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         
         this._unregisterDependPriorityCalculator();
     };
+    
+    DependencyWorkersTaskInternals.prototype.customEvent = function customEvent(arg0, arg1) {
+        if (this.isTerminated) {
+            throw 'dependencyWorkers: already terminated';
+        }
+        
+        this._iterateCallbacks(function(callbacks) {
+            if (callbacks.onCustom) {
+                callbacks.onCustom(arg0, arg1);
+            }
+        });
+        
+        this.taskApi._onEvent('custom', arg0, arg1);
+    };
 
     DependencyWorkersTaskInternals.prototype.terminate = function terminate() {
         if (this.isTerminated) {
@@ -196,6 +209,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
             taskKey, {
                 'onData': onDependencyTaskData,
                 'onTerminated': onDependencyTaskTerminated,
+                'onCustom': onDependencyTaskCustom,
                 calleeForDebug: this
             }
         );
@@ -226,6 +240,10 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
             that._hasDependTaskData[index] = true;
             that.taskApi._onEvent('dependencyTaskData', data, taskKey);
             gotData = true;
+        }
+        
+        function onDependencyTaskCustom(arg0, arg1) {
+            that.taskApi._onEvent('dependencyTaskCustom', arg0, arg1);
         }
         
         function onDependencyTaskTerminated() {
@@ -293,29 +311,34 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         }
         
         if (this._pendingDelayedNewData) {
-            var contexts = this.taskContexts;
-            iterator = contexts.getFirstIterator();
-            while (iterator !== null) {
-                context = contexts.getFromIterator(iterator);
-                iterator = contexts.getNextIterator(iterator);
-                
-                context._callbacks.onData(this.lastProcessedData, this.taskKey);
-            }
+            var that = this;
+            this._pendingDelayedNewData = false;
+            this._iterateCallbacks(function(callbacks) {
+                callbacks.onData(that.lastProcessedData, that.taskKey);
+            });
         }
         
         if (this._pendingDelayedEnded) {
-            iterator = this.taskContexts.getFirstIterator();
-            while (iterator !== null) {
-                context = this.taskContexts.getFromIterator(iterator);
-                iterator = this.taskContexts.getNextIterator(iterator);
-
-                if (context._callbacks.onTerminated) {
-                    context._callbacks.onTerminated();
+            this._pendingDelayedEnded = false;
+            this._iterateCallbacks(function(callbacks) {
+                if (callbacks.onTerminated) {
+                    callbacks.onTerminated();
                 }
-            }
+            });
             
             this.taskContexts.clear();
         }
+    };
+    
+    DependencyWorkersTaskInternals.prototype._iterateCallbacks = function(perform) {
+        var iterator = this.taskContexts.getFirstIterator();
+        while (iterator !== null) {
+            var context = this.taskContexts.getFromIterator(iterator);
+            iterator = this.taskContexts.getNextIterator(iterator);
+
+            perform(context._callbacks);
+        }
+
     };
     
     return DependencyWorkersTaskInternals;

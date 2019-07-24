@@ -1,25 +1,21 @@
 'use strict';
 
 var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
-    function DependencyWorkersTask(wrapped, key, registerWrappedEvents, additionalEvents) {
+    function DependencyWorkersTask(wrapped, key, registerWrappedEvents) {
         this._wrapped = wrapped;
         wrapped.__wrappigTaskForDebug = this;
         this._key = key;
         this._eventListeners = {
             'dependencyTaskData': [],
             'statusUpdated': [],
-            'allDependTasksTerminated': []
+            'allDependTasksTerminated': [],
+            'custom': [],
+            'dependencyTaskCustom': []
         };
         
         if (registerWrappedEvents) {
             for (var event in this._eventListeners) {
                 this._registerWrappedEvent(event);
-            }
-        }
-        
-        if (additionalEvents) {
-            for (var i = 0; i < additionalEvents.length; ++i) {
-                this._eventListeners[additionalEvents[i]] = [];
             }
         }
     }
@@ -46,6 +42,10 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
     
     DependencyWorkersTask.prototype.calculatePriority = function calculatePriority() {
         return this._wrapped.calculatePriority();
+    };
+    
+    DependencyWorkersTask.prototype.customEvent = function customEvent(arg0, arg1) {
+        return this._wrapped.customEvent(arg0, arg1);
     };
     
     DependencyWorkersTask.prototype.on = function on(event, listener) {
