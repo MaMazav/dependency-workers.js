@@ -3,7 +3,7 @@
 var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
     function DependencyWorkersTask(wrapped, key, registerWrappedEvents) {
         this._wrapped = wrapped;
-        wrapped.__wrappigTaskForDebug = this;
+        wrapped.__wrappingTaskForDebug = this;
         this._key = key;
         this._eventListeners = {
             'dependencyTaskData': [],
@@ -24,8 +24,8 @@ var DependencyWorkersTask = (function DependencyWorkersTaskClosure() {
         return this._wrapped.isTerminated;
     } });
     
-    DependencyWorkersTask.prototype.dataReady = function dataReady(newDataToProcess, workerType) {
-        this._wrapped.dataReady(newDataToProcess, workerType);
+    DependencyWorkersTask.prototype.dataReady = function dataReady(newDataToProcess, workerType, canSkip) {
+        this._wrapped.dataReady(newDataToProcess, workerType, canSkip);
     };
     
     DependencyWorkersTask.prototype.detachBeforeTermination = function detach() {

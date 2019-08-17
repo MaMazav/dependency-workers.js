@@ -49,10 +49,6 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 this._workerInputRetreiver);
                 
             this._workerInputRetreiver.taskStarted(taskInternals.taskApi);
-            
-            if (taskInternals.isTerminated) {
-                taskInternals.isTerminatedImmediatelyForDebug = true;
-            }
         }
 
         return taskContext;
@@ -65,11 +61,12 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
         return new Promise(function(resolve, reject) {
             var taskContext = that.startTask(
                 taskKey, { 'onData': onData, 'onTerminated': onTerminated });
-            
-            var hasData = taskContext.hasData();
+                
+            var processedData = taskContext.getProcessedData();
+            var hasData = processedData.length > 0;
             var result;
             if (hasData) {
-                result = taskContext.getLastData();
+                result = processedData[processedData.length - 1];
             }
             
             function onData(data) {
@@ -77,12 +74,13 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 result = data;
             }
             
-            function onTerminated() {
-                if (hasData) {
+            function onTerminated(isAborted) {
+                if (isAborted) {
+                    reject('Task is aborted');
+                } else if (hasData) {
                     resolve(result);
                 } else {
-                    reject('dependencyWorkers: Internal ' +
-                        'error - task terminated but no data returned');
+                    reject('Task terminated but no data returned');
                 }
             }
         });
@@ -99,7 +97,7 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
     };
     
     DependencyWorkers.prototype._dataReady = function dataReady(
-            taskInternals, dataToProcess, workerType) {
+            taskInternals, dataToProcess, workerType, canSkip) {
         
         var that = this;
         var worker;
@@ -116,7 +114,7 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
 
             if (!workerArgs) {
                 taskInternals.newData(dataToProcess);
-                taskInternals.statusUpdate();
+                taskInternals.workerDone();
                 return;
             }
             
@@ -130,11 +128,6 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
             };
         }
         
-        if (!taskInternals.waitingForWorkerResult) {
-            taskInternals.waitingForWorkerResult = true;
-            taskInternals.statusUpdate();
-        }
-        
         var args = [dataToProcess, taskInternals.taskKey];
         var options = {
             'isReturnPromise': true,
@@ -145,36 +138,23 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
         var promise = worker.proxy.callFunction('start', args, options);
         promise
             .then(function(processedData) {
-                taskInternals.newData(processedData);
+                taskInternals.newData(processedData, canSkip);
                 return processedData;
             }).catch(function(e) {
                 console.log('Error in DependencyWorkers\' worker: ' + e);
                 return e;
             }).then(function(result) {
                 workerPool.push(worker);
-                
-                if (!that._checkIfPendingData(taskInternals)) {
-                    taskInternals.waitingForWorkerResult = false;
-                    taskInternals.statusUpdate();
-                }
+                taskInternals.workerDone();
             });
     };
     
-    DependencyWorkers.prototype._checkIfPendingData = function checkIfPendingData(taskInternals) {
-        if (!taskInternals.isPendingDataForWorker) {
-            return false;
-        }
-        
-        var dataToProcess = taskInternals.pendingDataForWorker;
-        taskInternals.isPendingDataForWorker = false;
-        taskInternals.pendingDataForWorker = null;
-        
-        this._dataReady(
-            taskInternals,
-            dataToProcess,
-            taskInternals.pendingWorkerType);
-        
-        return true;
+    DependencyWorkers.prototype.waitForSchedule = function waitForSchedule(scheduleNotifier) {
+        scheduleNotifier.schedule({ 'jobDone': function() { } });
+    };
+    
+    DependencyWorkers.prototype.initializingTask = function initializingTask(taskApi) {
+        // Do nothing, overriden by inheritors
     };
     
     return DependencyWorkers;

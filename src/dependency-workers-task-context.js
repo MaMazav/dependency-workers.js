@@ -8,20 +8,16 @@ var DependencyWorkersTaskContext = (function DependencyWorkersTaskContextClosure
         this._priorityCalculatorIterator = null;
     }
     
+    Object.defineProperty(DependencyWorkersTaskContext.prototype, 'isActive', { get: function() {
+        return this._taskInternals.isActualTerminationPending || !this._taskInternals.isTerminated;
+    } });
+    
     Object.defineProperty(DependencyWorkersTaskContext.prototype, 'isTerminated', { get: function() {
         return this._taskInternals.isTerminated;
     } });
     
-    Object.defineProperty(DependencyWorkersTaskContext.prototype, 'isTerminatedImmediatelyForDebug', { get: function() {
-        return this._taskInternals.isTerminatedImmediatelyForDebug;
-    } });
-
-    DependencyWorkersTaskContext.prototype.hasData = function hasData() {
-        return this._taskInternals.hasProcessedData;
-    };
-    
-    DependencyWorkersTaskContext.prototype.getLastData = function getLastData() {
-        return this._taskInternals.lastProcessedData;
+    DependencyWorkersTaskContext.prototype.getProcessedData = function getProcessedData() {
+        return this._taskInternals.processedData;
     };
     
     DependencyWorkersTaskContext.prototype.setPriorityCalculator = function setPriorityCalculator(calculator) {
@@ -52,9 +48,12 @@ var DependencyWorkersTaskContext = (function DependencyWorkersTaskContextClosure
         
         this._taskInternals.taskContexts.remove(this._taskContextsIterator);
         this._taskContextsIterator = null;
-        
         if (!this._taskInternals.isTerminated) {
-            this._taskInternals.statusUpdate();
+            if (this._taskInternals.taskContexts.getCount() === 0) {
+                this._taskInternals.abort(/*abortByScheduler=*/false);
+            } else {
+                this._taskInternals.statusUpdate();
+            }
         }
     };
 
