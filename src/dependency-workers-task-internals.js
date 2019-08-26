@@ -47,11 +47,12 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         this._pendingDelayedNewData = [];
         this._pendingDelayedCanSkipLastNewData = false;
         this._pendingWorkerDone = false;
-        this._performPendingDelayedActionsBound = this._performPendingDelayedActions.bind(this);
         
         var that = this;
         this._scheduleNotifier = {
-            'calculatePriority': this.calculatePriority.bind(this),
+            'calculatePriority': function() {
+                return that.calculatePriority();
+            },
             'schedule': function(jobCallbacks) {
                 if (that._jobCallbacks !== null) {
                     throw 'dependencyWorkers: scheduleNotifier.schedule was called twice';
@@ -84,7 +85,9 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
                     dataToProcess.workerType,
                     canSkip);
             },
-            'abort': this.abort.bind(this)
+            'abort': function(abortedByScheduler) {
+                that.abort(abortedByScheduler);
+            }
         };
     }
     
@@ -104,9 +107,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
     
     DependencyWorkersTaskInternals.prototype.ended = function() {
         this._pendingDelayedEnded = true;
-        if (!this._pendingDelayedAction) {
-            setTimeout(this._performPendingDelayedActionsBound);
-        }
+        this._schedulePendingDelayedActions();
     };
     
     DependencyWorkersTaskInternals.prototype.statusUpdate = function() {
@@ -147,12 +148,9 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         } else {
             this._pendingDelayedNewData.push(data);
         }
-        this._pendingDelayedCanSkipLastNewData = !!canSkip;
         
-        if (!this._pendingDelayedAction) {
-            this._pendingDelayedAction = true;
-            setTimeout(this._performPendingDelayedActionsBound);
-        }
+        this._pendingDelayedCanSkipLastNewData = !!canSkip;
+        this._schedulePendingDelayedActions();
     };
     
     DependencyWorkersTaskInternals.prototype.workerDone = function() {
@@ -165,10 +163,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         
         if (this.pendingDataForWorker.length === 0) {
             this._pendingWorkerDone = true;
-            if (!this._pendingDelayedAction) {
-                this._pendingDelayedAction = true;
-                setTimeout(this._performPendingDelayedActionsBound);
-            }
+            this._schedulePendingDelayedActions();
         }
         
         jobCallbacks['jobDone']();
@@ -351,9 +346,9 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
                 onDependencyTaskData: onDependencyTaskData
             });
         }
-        if (processedData.length > 0 && !this._pendingDelayedAction) {
-            this._pendingDelayedAction = true;
-            setTimeout(this._performPendingDelayedActionsBound);
+        
+        if (processedData.length > 0) {
+            this._schedulePendingDelayedActions();
         }
         
         return addResult.value.taskContext;
@@ -366,10 +361,7 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
                     onDependencyTaskData: onDependencyTaskData
                 });
                 
-                if (!that._pendingDelayedAction) {
-                    that._pendingDelayedAction = true;
-                    setTimeout(that._performPendingDelayedActionsBound);
-                }
+                that._schedulePendingDelayedActions();
                 
                 return;
             }
@@ -413,7 +405,10 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
             throw 'dependencyWorkers: already registered depend priority calculator';
         }
         if (this._priorityCalculator === null) {
-            this._priorityCalculator = this.calculatePriority.bind(this);
+            var that = this;
+            this._priorityCalculator = function() {
+                return that.calculatePriority();
+            };
         }
         this._isRegisteredDependPriorityCalculator = true;
         
@@ -449,56 +444,62 @@ var DependencyWorkersTaskInternals = (function DependencyWorkersTaskInternalsClo
         this.statusUpdate();
     };
     
-    DependencyWorkersTaskInternals.prototype._performPendingDelayedActions = function() {
-        var iterator;
-        var context;
-        this._pendingDelayedAction = false;
-        
-        if (this._pendingDelayedDependencyData.length > 0) {
-            var localListeners = this._pendingDelayedDependencyData;
-            this._pendingDelayedDependencyData = [];
-            
-            for (var i = 0; i < localListeners.length; ++i) {
-                localListeners[i].onDependencyTaskData(localListeners[i].data);
-            }
+    DependencyWorkersTaskInternals.prototype._schedulePendingDelayedActions = function() {
+        if (this._pendingDelayedAction) {
+            return;
         }
         
-        if (this._pendingDelayedNewData.length > 0) {
-            var that = this;
-            var newData = this._pendingDelayedNewData;
-            var canSkipLast = this._pendingDelayedCanSkipLastNewData;
-            this._pendingDelayedNewData = [];
-            this._pendingDelayedCanSkipLastNewData = false;
+        this._pendingDelayedAction = true;
+        var that = this;
+        setTimeout(function() {
+            var iterator;
+            var context;
+            that._pendingDelayedAction = false;
             
-            if (this._canSkipLastProcessedData) {
-                this.processedData.pop();
-            }
-            
-            for (var i = 0; i < newData.length; ++i) {
-                this.processedData.push(newData[i]);
-                this._canSkipLastProcessedData = canSkipLast && i === newData.length - 1;
-                this._iterateCallbacks(function(callbacks) {
-                    callbacks.onData(newData[i], that.taskKey);
-                });
-            }
-        }
-        
-        if (this._pendingWorkerDone) {
-            this._isWaitingForWorkerResult = false;
-            this.statusUpdate();
-        }
-        
-        if (this._pendingDelayedEnded) {
-            this._pendingDelayedEnded = false;
-            var that = this;
-            this._iterateCallbacks(function(callbacks) {
-                if (callbacks.onTerminated) {
-                    callbacks.onTerminated(that._isAborted);
+            if (that._pendingDelayedDependencyData.length > 0) {
+                var localListeners = that._pendingDelayedDependencyData;
+                that._pendingDelayedDependencyData = [];
+                
+                for (var i = 0; i < localListeners.length; ++i) {
+                    localListeners[i].onDependencyTaskData(localListeners[i].data);
                 }
-            });
+            }
             
-            this.taskContexts.clear();
-        }
+            if (that._pendingDelayedNewData.length > 0) {
+                var newData = that._pendingDelayedNewData;
+                var canSkipLast = that._pendingDelayedCanSkipLastNewData;
+                that._pendingDelayedNewData = [];
+                that._pendingDelayedCanSkipLastNewData = false;
+                
+                if (that._canSkipLastProcessedData) {
+                    that.processedData.pop();
+                }
+                
+                for (var i = 0; i < newData.length; ++i) {
+                    that.processedData.push(newData[i]);
+                    that._canSkipLastProcessedData = canSkipLast && i === newData.length - 1;
+                    that._iterateCallbacks(function(callbacks) {
+                        callbacks.onData(newData[i], that.taskKey);
+                    });
+                }
+            }
+            
+            if (that._pendingWorkerDone) {
+                that._isWaitingForWorkerResult = false;
+                that.statusUpdate();
+            }
+            
+            if (that._pendingDelayedEnded) {
+                that._pendingDelayedEnded = false;
+                that._iterateCallbacks(function(callbacks) {
+                    if (callbacks.onTerminated) {
+                        callbacks.onTerminated(that._isAborted);
+                    }
+                });
+                
+                that.taskContexts.clear();
+            }
+        });
     };
     
     DependencyWorkersTaskInternals.prototype._iterateCallbacks = function(perform) {
