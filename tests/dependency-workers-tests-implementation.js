@@ -74,9 +74,9 @@ QUnit.test('Abort without dependent task', function(assert) {
         onTerminated: function(isAborted) {
             assert.equal(isAborted, true, 'Task expected to abort');
             done();
-    } });
-    
-    taskContext.setPriorityCalculator(function() { return priority; });
+        },
+        priorityCalculator: function() { return priority; }
+    });
     
     priority = -1;
     dummyJobCallbacks.jobDone();

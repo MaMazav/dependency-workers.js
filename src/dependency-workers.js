@@ -49,6 +49,8 @@ var DependencyWorkers = (function DependencyWorkersClosure() {
                 this._workerInputRetreiver);
                 
             this._workerInputRetreiver.taskStarted(taskInternals.taskApi);
+            
+            taskInternals.afterTaskStarted();
         }
 
         return taskContext;
